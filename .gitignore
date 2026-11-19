@@ -27,3 +27,6 @@ aidlc/diagnostics/
 .aidlc/base-source-listing.tsv
 .claude/settings.local.json
 # END AI-DLC:gitignore
+
+# Source DDCL Excel template (kept locally only, not pushed to GitHub)
+/DDCL BCAS PROD 202611 - TEMPLATE.xlsx
