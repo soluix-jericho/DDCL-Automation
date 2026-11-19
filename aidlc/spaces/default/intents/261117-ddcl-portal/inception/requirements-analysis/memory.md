@@ -12,3 +12,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+2026-11-19T00:00:00Z — lock auto-release timeout (FR10.1) has no concrete value yet; deferred to Functional Design.
+2026-11-19T00:00:00Z — whether DDCL versions (v2, v3...) show as separate rows or grouped under the parent in Portal Reporting is undecided; deferred to Domain Design/Functional Design.

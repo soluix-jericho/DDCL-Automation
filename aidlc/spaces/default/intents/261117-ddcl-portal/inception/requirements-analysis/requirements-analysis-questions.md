@@ -19,6 +19,10 @@ Ini temuan terbuka dari review Rough Mockups (R-01): `user-flow.md` mengasumsika
 
 [Answer]: A, tapi nanti misal ada tambahan misal step atau object yang kurang nanti mengacu pada ddcl itu
 
+### Klarifikasi Q1
+
+DDCL asli yang sudah "Sudah Dikirim" tetap read-only/tidak berubah. Kalau ternyata perlu revisi, pengguna klik DDCL tersebut untuk membuat versi baru (v2) yang namanya otomatis menjadi "<nama DDCL asli> v2", terhubung/mereferensikan ke DDCL asal (bukan DDCL yang berdiri sendiri tanpa hubungan). Versi v2 ini mulai dari draft (bisa diedit) dan mengikuti siklus status yang sama (draft → sudah dikirim → read-only, lalu bisa dibuat v3 dari v2 jika diperlukan lagi, dst).
+
 ## Q2. [Fungsional] Bagaimana jika dua pengguna mengedit DDCL yang sama secara bersamaan?
 
 Temuan terbuka dari review Rough Mockups (R-02): multi-pengguna adalah kapabilitas inti MVP, tapi penanganan edit bersamaan belum ditentukan.
@@ -74,3 +78,20 @@ Data DDCL berisi informasi operasional produksi yang dikirim ke klien dan dipaka
 - X. Other (please specify)
 
 [Answer]: A, tapi nanti di masa depan dipikirkan kembali apakah ada housekeepingnya
+
+## Consolidated Summary Confirmation
+
+- DDCL berstatus "Sudah Dikirim" bersifat read-only. Revisi dibuat dengan membuka DDCL tersebut dan membuat versi baru (v2, v3, dst.) bernama "<nama DDCL asli> vN", terhubung ke DDCL asal; versi baru mulai dari draft dan mengikuti siklus status yang sama (Q1).
+- Dua pengguna mengedit DDCL yang sama: dikunci (lock) saat sedang diedit satu pengguna; pengguna lain hanya bisa melihat sampai lock dilepas (Q2).
+- Library Step & Object menampilkan jumlah DDCL yang memakai tiap step, agar pengguna tahu dampak sebelum mengubah/menghapus step (Q3).
+- Untuk v1, hanya ada satu pengguna (pembuat DDCL sendiri); model otorisasi multi-pengguna yang lebih ketat (siapa boleh edit DDCL siapa) belum perlu diputuskan sekarang — portal tetap mendukung banyak akun secara teknis sesuai scope, tapi aturan kepemilikan/izin antar-pengguna ditunda sampai benar-benar dipakai multi-pengguna (Q4).
+- Step di Library tetap bisa dihapus meski sedang dipakai; DDCL yang sudah memakainya menyimpan datanya sendiri (tidak terpengaruh saat step dihapus dari Library) (Q5).
+- Skala v1: di bawah 20 pengguna aktif, ratusan DDCL per tahun; tidak ada target performa khusus di luar responsif untuk pemakaian normal (Q6).
+- Data DDCL disimpan permanen untuk v1 (tidak ada penghapusan/retensi otomatis); kebutuhan housekeeping data dipertimbangkan ulang di masa depan (Q7).
+
+Does this all look correct before I generate the artifact?
+
+- Looks correct
+- Request changes
+
+[Answer]: Looks correct
