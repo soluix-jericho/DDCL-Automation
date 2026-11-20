@@ -17,6 +17,8 @@
 <!-- A project that merges into another branch than team.md names says so on its own line, read before team.md's: -->
 <!-- - **Integration branch**: develop -->
 
+- Setelah suatu pekerjaan (perbaikan atau fitur) selesai dan dikonfirmasi, push komit ke remote GitHub (`origin`), bukan hanya disimpan lokal. (learned 2026-11-20) <!-- cid:261117-ddcl-portal:delivery-planning:7a481ff435efd52bf7e67b4411daa6cefa370f6999666d13e826fe3b901d2a06 -->
+
 ## Walking Skeleton
 
 <!-- Project-specific specialisation. Example: -->

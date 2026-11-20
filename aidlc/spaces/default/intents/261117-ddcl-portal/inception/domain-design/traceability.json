@@ -1,0 +1,91 @@
+{
+  "stage": "domain-design",
+  "upstream_ids": [
+    "US1.1",
+    "US1.2",
+    "US1.3",
+    "US2.3",
+    "US2.1",
+    "US2.2",
+    "US2.4",
+    "US3.1",
+    "US3.2",
+    "US4.1",
+    "US5.1",
+    "US5.2",
+    "US6.1",
+    "US6.2"
+  ],
+  "coverage": [
+    {
+      "id": "US1.1",
+      "status": "OK",
+      "target": "StepLibrary"
+    },
+    {
+      "id": "US1.2",
+      "status": "OK",
+      "target": "StepLibrary"
+    },
+    {
+      "id": "US1.3",
+      "status": "OK",
+      "target": "StepLibrary"
+    },
+    {
+      "id": "US2.3",
+      "status": "OK",
+      "target": "DdclDocument.RollbackItem"
+    },
+    {
+      "id": "US2.1",
+      "status": "OK",
+      "target": "DdclDocument.ReleaseHeader"
+    },
+    {
+      "id": "US2.2",
+      "status": "OK",
+      "target": "DdclDocument.ChecklistItem"
+    },
+    {
+      "id": "US2.4",
+      "status": "OK",
+      "target": "DdclDocument.CaptureNote"
+    },
+    {
+      "id": "US3.1",
+      "status": "OK",
+      "target": "DdclDocument"
+    },
+    {
+      "id": "US3.2",
+      "status": "OK",
+      "target": "DdclDocument"
+    },
+    {
+      "id": "US4.1",
+      "status": "OK",
+      "target": "ExcelExportService"
+    },
+    {
+      "id": "US5.1",
+      "status": "OK",
+      "target": "DdclDocument"
+    },
+    {
+      "id": "US5.2",
+      "status": "OK",
+      "target": "DdclDocument"
+    },
+    {
+      "id": "US6.1",
+      "status": "OK",
+      "target": "DdclDocument"
+    },
+    {
+      "id": "US6.2",
+      "status": "OK",
+      "target": "UserAccount"
+    }
+  ]
+}
