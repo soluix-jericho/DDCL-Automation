@@ -30,3 +30,11 @@ aidlc/diagnostics/
 
 # Source DDCL Excel template (kept locally only, not pushed to GitHub)
 /DDCL BCAS PROD 202611 - TEMPLATE.xlsx
+
+# Application: secrets, local template copy for Compose, build output
+.env
+template/
+node_modules/
+coverage/
+dist/
+backend/tests/.tmp/

@@ -1,0 +1,13 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-walking-skeleton",
+  "version": 1,
+  "writes": [
+    { "path": ".gitignore" },
+    { "path": ".env.example" },
+    { "path": "docker-compose.yml" },
+    { "path": ".github/workflows/ci.yml" },
+    { "path": "backend/" },
+    { "path": "frontend/" }
+  ]
+}

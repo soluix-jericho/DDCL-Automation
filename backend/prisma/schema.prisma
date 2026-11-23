@@ -1,0 +1,63 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StepKind {
+  forward
+  rollback
+}
+
+enum DdclStatus {
+  Draft
+  SudahDikirim @map("Sudah Dikirim")
+}
+
+model Step {
+  id                   String          @id @default(cuid())
+  name                 String
+  category             String
+  kind                 StepKind        @default(forward)
+  pairedRollbackStepId String?
+  pairedRollbackStep   Step?           @relation("StepRollbackPair", fields: [pairedRollbackStepId], references: [id])
+  pairedForwardSteps   Step[]          @relation("StepRollbackPair")
+  checklistItems       ChecklistItem[]
+}
+
+model DdclDocument {
+  id             String          @id @default(cuid())
+  title          String
+  status         DdclStatus      @default(Draft)
+  createdBy      String
+  createdAt      DateTime        @default(now())
+  releaseHeader  ReleaseHeader?
+  checklistItems ChecklistItem[]
+}
+
+model ReleaseHeader {
+  id               String       @id @default(cuid())
+  ddclId           String       @unique
+  ddcl             DdclDocument @relation(fields: [ddclId], references: [id])
+  date             DateTime?    @db.Date
+  startDate        DateTime?    @db.Date
+  impactedSystem   String?
+  environment      String?
+  phaseRelease     String?
+  releaseObjective String?
+  technicalChange  String?
+}
+
+model ChecklistItem {
+  id              String       @id @default(cuid())
+  ddclId          String
+  ddcl            DdclDocument @relation(fields: [ddclId], references: [id])
+  stepId          String
+  step            Step         @relation(fields: [stepId], references: [id])
+  order           Int          @default(1)
+  parameterValues Json?
+}
