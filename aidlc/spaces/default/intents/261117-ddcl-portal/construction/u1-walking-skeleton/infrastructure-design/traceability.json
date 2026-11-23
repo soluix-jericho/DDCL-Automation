@@ -1,0 +1,32 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u1-walking-skeleton",
+  "upstream_ids": [
+    "NFR1.1",
+    "NFR1.2",
+    "NFR1.3",
+    "NFR1.4",
+    "NFR2.1",
+    "NFR2.4",
+    "NFR2.5",
+    "NFR2.3",
+    "NFR3.1",
+    "NFR4.1",
+    "NFR6.1",
+    "NFR3.2"
+  ],
+  "coverage": [
+    { "id": "NFR1.1", "status": "OK", "target": "Satu instance backend + PostgreSQL lokal (container backend, db)" },
+    { "id": "NFR1.2", "status": "OK", "target": "Satu instance backend + PostgreSQL lokal (container backend, db)" },
+    { "id": "NFR1.3", "status": "OK", "target": "Satu instance backend + PostgreSQL lokal (container backend, db)" },
+    { "id": "NFR1.4", "status": "OK", "target": "Satu instance per container tanpa load balancer (infrastructure-specification Resource sizing)" },
+    { "id": "NFR2.1", "status": "N/A", "target": "Cookie sesi HTTP-only nilai stub adalah logika aplikasi; tidak butuh resource infrastruktur" },
+    { "id": "NFR2.4", "status": "OK", "target": "Container db tanpa published port di jaringan internal Compose" },
+    { "id": "NFR2.5", "status": "N/A", "target": "Data operasional tanpa masking; tidak ada kontrol infrastruktur" },
+    { "id": "NFR2.3", "status": "OK", "target": ".env via env_file Compose, .env di .gitignore, .env.example dikomit" },
+    { "id": "NFR3.1", "status": "OK", "target": "docker-compose.yml tiga container; healthcheck backend dan db" },
+    { "id": "NFR4.1", "status": "OK", "target": "Named volume Docker untuk data PostgreSQL" },
+    { "id": "NFR6.1", "status": "OK", "target": "Bind mount read-only ./template/ ke container backend + env DDCL_TEMPLATE_PATH; kecocokan 1:1 diverifikasi manual di checkpoint skeleton" },
+    { "id": "NFR3.2", "status": "N/A", "target": "Error 500 generik saat DB tidak terjangkau adalah perilaku aplikasi; infrastruktur hanya menyediakan log lewat docker compose logs" }
+  ]
+}
