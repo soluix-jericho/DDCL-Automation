@@ -1,0 +1,1 @@
+docker compose run --rm backend npx vitest run tests/u1 --coverage.enabled=false && docker compose run --rm frontend npx vitest run tests/u1 --coverage.enabled=false

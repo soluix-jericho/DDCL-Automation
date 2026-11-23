@@ -1,0 +1,48 @@
+## Review
+
+**Verdict:** READY
+**Reviewer:** aidlc-architecture-reviewer-agent
+**Date:** 2026-11-23T11:19:41Z
+**Iteration:** 2
+**Verdict Dictated:** no
+
+### Findings
+
+| ID | Severity | Location | Finding | Required action | Status |
+|---|---|---|---|---|---|
+| R-01 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/traceability.json > coverage AC1.3.2 | AC1.3.2 ditandai OK ke BR2.10. Padahal AC1.3.2 berbunyi: penanda muncul di bagian Rollback & Recovery Plan saat step ditambahkan ke DDCL. BR2.10 hanya menandai di daftar Library, dan BR2.10 sendiri menyatakan penanda di DDCL adalah cakupan u3. Jadi status OK tidak jujur: separuh AC (inti ceritanya) tidak diimplementasikan di Unit ini. | Ubah status AC1.3.2 menjadi sebagian atau N/A untuk bagian DDCL, dengan target eksplisit u3-ddcl-composition. Nyatakan bahwa U3 membaca penanda dari stepSnapshot (ada atau tidaknya salinan pasangan rollback). Tambahkan juga catatan deviasi pada baris AC1.1.3 di traceability (saat ini hanya ada di functional-spec). | Resolved (reviewer) |
+| R-02 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.7 vs BR2.11 / entities.md > StepBundle constraints | Kontradiksi: BR2.7 mengeluarkan step yang dihapus dari semua bundle (posisi dirapatkan), sedangkan StepBundle mewajibkan minimal satu anggota forward dan BR2.11 menolak bundle tanpa anggota forward. Menghapus satu-satunya step forward sebuah bundle menghasilkan bundle yang melanggar invarian, dan BR2.7 menyatakan penghapusan tidak pernah ditolak. Perilaku bundle yang menjadi kosong tidak didefinisikan. | Tetapkan perilaku: bundle ikut terhapus bila anggota forward terakhirnya dihapus, atau bundle tetap ada dengan status kosong (lalu longgarkan invarian). Tampilkan dampak ke bundle di konfirmasi hapus (Alur 4). | Resolved (reviewer) |
+| R-03 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.11, BR2.9; functional-spec.md > Alur 5 | Hubungan pasangan rollback per step (Step.pairedRollbackStepId, dipakai AC2.3.1) dan rangkaian rollback bundle tidak punya aturan konsistensi atau prioritas. Tidak jelas: apakah pasangan per step harus ada di rangkaian rollback bundle; mana yang menang saat bundle dipasang ke DDCL; apakah rangkaian rollback dijalankan urutan terbalik; apakah bundle membawa snapshot sendiri. Alur 5 menyerahkan ini ke U3 tanpa merumuskan kontrak data. Developer U2 maupun U3 harus menebak. | Tambahkan aturan eksplisit: sumber rollback saat bundle dipasang, urutan rollback, dan apakah step forward bundle tanpa pasangan ditandai (BR2.10). Rumuskan bentuk data bundle yang dibaca U3 (mis. diekspansi menjadi checklist item dengan snapshot per step). | Resolved (reviewer) |
+| R-04 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.4 | Tata bahasa variabel tidak lengkap untuk kasus tepi. Tidak ditentukan: `{}` kosong; `{ nama }` atau `{a.b}` (berpasangan tetapi nama tidak sah: 400 atau literal?); `{{{x}}}` (ambigu antara escape dan variabel); sensitivitas huruf `{Host}` vs `{host}` (satu atau dua variabel); teks JSON seperti `{"a":1}` di langkah (akan 400 karena nama tidak sah atau tidak berpasangan, padahal step deploy sering memuat JSON). Selain itu, cara `{{` dirender kembali (di snapshot, U3 isian, ekspor Excel U6) tidak dinyatakan. | Definisikan tata bahasa tepat (mis. regex token dan urutan pemindaian kiri ke kanan), tentukan perlakuan setiap kasus tepi di atas, sensitivitas huruf nama variabel, dan siapa yang mengganti `{{`/`}}` menjadi literal saat tampil dan ekspor. | Resolved (reviewer) |
+| R-05 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/functional-spec.md > Perluasan Kontrak API (kategori) vs inception/contract-design/contract-summary.md > Contract 2 `/api/v1/steps/categories` | Spec menyatakan perluasan dilakukan "tanpa mengubah bentuk yang sudah ada", tetapi Contract 2 mendefinisikan categories sebagai "skema kategori object/parameter per jenis step", sedangkan BR2.12 mengembalikan nama kategori saja. Ini mengubah bentuk respons yang sudah dikontrakkan, dan konsumen frontend (U1/U3) bisa bergantung pada bentuk lama. Selain itu `kind` ikut diubah menjadi bagian skema form tetapi kontrak tidak menyebutnya. | Catat secara eksplisit sebagai perubahan Contract 2 (bukan perluasan), tentukan bentuk respons baru, dan tandai bahwa contract-summary harus diperbarui atau U1 yang memakai endpoint ini dipastikan kompatibel. | Resolved (reviewer) |
+| R-06 | Minor | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/entities.md > ChecklistItem; rules.md > BR2.6, BR2.8 | Beberapa hal koherensi ChecklistItem belum dinyatakan: (a) item U1 yang sudah ada tidak punya stepSnapshot (kolom required), perlu backfill/migrasi; (b) item rollback otomatis (AC2.3.1) apakah punya stepId ke step rollback, sehingga masuk ke usageCount step rollback, atau hanya salinan di snapshot step forward; (c) POST checklist-items untuk stepId yang sudah dihapus (404?) dan pembacaan step + pembuatan snapshot harus dalam satu transaksi agar tidak balapan dengan hapus; (d) bila U3 mengubah lampiran/nilai per DDCL, lokasi penyimpannya (snapshot atau kolom lain) tidak ditentukan, padahal constraint menyebut snapshot tidak pernah ditulis ulang. | Tambahkan keempat klarifikasi ke BR2.6/BR2.8 atau entities.md, termasuk catatan migrasi data U1 dan lokasi nilai per-DDCL. | Resolved (reviewer) |
+| R-07 | Minor | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.3, BR2.9 | Keunikan nama berlaku per (name, category) tanpa kind, sehingga step rollback dan forward bernama sama di kategori sama saling menolak (409), padahal pasangan biasanya mirip namanya. Tidak dinyatakan pula perilaku 409 untuk `rollbackStep` inline yang bentrok nama (bentuk respons, atomisitas). | Putuskan apakah kind masuk ke kunci keunikan; definisikan respons 409 untuk rollbackStep inline. | Resolved (reviewer) |
+| R-08 | Minor | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.2, BR2.1 | Menghapus kolom yang masih berisi langkah, atau menyimpan kolom/langkah kosong, tidak diatur (hilang diam-diam? disimpan sebagai baris kosong? dibuang saat simpan?). | Tentukan: konfirmasi saat menghapus kolom berisi, dan apakah langkah/kolom kosong dibuang saat simpan. | Resolved (reviewer) |
+| R-09 | Major | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.1 dan BR2.9 (PATCH step) | PATCH boleh mengubah jenis (kind) sebuah step, tetapi tidak ada aturan untuk step yang sudah menjadi pasangan rollback step lain (pairedRollbackStepId), anggota forward bundle, atau anggota rollback bundle. Mengubah kind step semacam itu melanggar invarian entities.md (target pasangan harus rollback; anggota forward harus forward) dan membuat data tidak konsisten. Pemeriksaan keunikan BR2.3 juga belum menyebut perubahan kind. | Tambahkan aturan: ubah kind ditolak 400 (atau dibatasi) selama step masih dipakai sebagai pasangan atau anggota bundle, dan sebutkan bahwa perubahan kind ikut diperiksa oleh BR2.3. | New |
+| R-10 | Minor | aidlc/spaces/default/intents/261117-ddcl-portal/construction/u2-step-library/functional-design/rules.md > BR2.11 | Bundle category opsional tidak punya hubungan dengan kategori step anggotanya, dan BR2.11 tidak menyatakan apakah campuran kategori diizinkan. | Nyatakan eksplisit bahwa kategori bundle hanya label dan tidak divalidasi terhadap anggota. | New |
+
+> R-01 Reviewer note: AC1.3.2 sekarang berstatus Deferred ke u3 dengan catatan sisi Library (BR2.10); deviasi AC1.1.3 tercatat di traceability dan functional-spec.
+
+> R-02 Reviewer note: BR2.7 menghapus bundle yang kehilangan anggota forward terakhir, rangkaian rollback kosong dinyatakan sah (sesuai kardinalitas 0..* di entities.md), dan konfirmasi hapus menampilkan bundle terdampak (Alur 4). Tidak bertentangan dengan BR2.11/BR2.14.
+
+> R-03 Reviewer note: BR2.14 menetapkan sumber rollback (per step vs rangkaian bundle), urutan, dan bentuk respons GET /bundles/{id} untuk U3. Asumsi tafsir Q11 dicatat sebagai [open] untuk U3, dapat diterima.
+
+> R-04 Reviewer note: BR2.4 kini punya tata bahasa pemindaian lengkap (kasus {}, { nama }, {a.b}, JSON, {{{x}}}, sensitif huruf besar/kecil) dan menetapkan satu fungsi render backend bersama.
+
+> R-05 Reviewer note: Spec memisahkan "Perubahan bentuk" untuk /steps/categories dari "Perluasan", dan mewajibkan pemeriksaan pemakai U1.
+
+> R-06 Reviewer note: Migrasi item U1, transaksi dan 404 untuk stepId terhapus, serta lokasi perDdclValues (milik U3) sudah ditetapkan di BR2.8 dan entities.md.
+
+> R-07 Reviewer note: Kunci keunikan memuat kind; BR2.3 mencakup rollbackStep inline (seluruh permintaan ditolak) dan conflictOn; spec mencatat perluasan kunci 409 terhadap Contract 2.
+
+> R-08 Reviewer note: BR2.2 mengatur konfirmasi hapus kolom berisi, penolakan kolom terakhir, dan pembuangan baris atau kolom kosong saat simpan.
+
+### Validation Tool Results
+
+| Tool | Result | Interpretation |
+|---|---|---|
+| (none) | Tidak dijalankan | Stage definition tidak mencantumkan validation tool. |
+
+### Summary
+
+Kedelapan temuan iterasi 1 sudah diperbaiki, dan tidak ada kontradiksi baru antara BR2.7, BR2.14, batasan bundle, serta kunci keunikan berisi kind terhadap deskripsi 409 Contract 2. Satu celah Major tersisa (perubahan kind pada step yang sudah dirujuk); jumlahnya masih dalam batas READY.

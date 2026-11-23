@@ -40,7 +40,7 @@
 
 ## Runtime State
 - **Revision Count**: 0
-- **Construction Checkpoints**: enabled
+- **Construction Checkpoints**: disabled
 - **Construction Iteration**: unit-major
 - **Construction Execution**: serial
 
@@ -59,6 +59,11 @@
 
 
 
+
+
+
+
+- **Construction Verification Command**: docker compose run --rm backend npx vitest run tests/u1 --coverage.enabled=false && docker compose run --rm frontend npx vitest run tests/u1 --coverage.enabled=false
 
 
 
@@ -123,7 +128,7 @@
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-11-23T08:04:42Z
+- **Last Updated**: 2026-11-23T11:21:42Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning
