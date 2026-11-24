@@ -1,0 +1,39 @@
+{
+  "stage": "nfr-design",
+  "unit": "u2-step-library",
+  "upstream_ids": [
+    "NFR1.1", "NFR1.4", "NFR1.5", "NFR1.6", "NFR1.7", "NFR1.8", "NFR1.9", "NFR1.10", "NFR1.11",
+    "NFR2.1", "NFR2.2", "NFR2.3", "NFR2.4", "NFR2.5", "NFR2.6", "NFR2.7", "NFR2.8", "NFR2.9",
+    "NFR3.4", "NFR3.5", "NFR3.6",
+    "NFR4.2", "NFR4.3", "NFR4.4", "NFR4.5", "NFR4.6", "NFR4.7"
+  ],
+  "coverage": [
+    { "id": "NFR1.1", "status": "N/A", "target": "ID milik u1-walking-skeleton (buat step skeleton); hanya dirujuk sebagai konteks" },
+    { "id": "NFR1.4", "status": "N/A", "target": "ID milik u1-walking-skeleton; hanya dirujuk sebagai konteks" },
+    { "id": "NFR1.5", "status": "OK", "target": "Ringkasan daftar, agregasi usageCount terindeks, escape q (performance-design.md ## Daftar dan Cari)" },
+    { "id": "NFR1.6", "status": "OK", "target": "Satu transaksi dengan createMany dan test payload batas maksimum (performance-design.md ## Simpan dan Hapus, ## Verifikasi)" },
+    { "id": "NFR1.7", "status": "OK", "target": "Satu transaksi hapus dengan laporan dampak (performance-design.md ## Simpan dan Hapus)" },
+    { "id": "NFR1.8", "status": "OK", "target": "Skema Fastify plus fungsi validasi domain (performance-design.md ## Batas Ukuran, security-design.md ## Validasi Input)" },
+    { "id": "NFR1.9", "status": "OK", "target": "Satu proses, skenario uji 20 serentak (scalability-design.md ## Arsitektur Scaling, performance-design.md ## Verifikasi)" },
+    { "id": "NFR1.10", "status": "OK", "target": "bodyLimit 24 MiB dan pembatas tulis 4 serentak (503) (performance-design.md ## Batas Ukuran)" },
+    { "id": "NFR1.11", "status": "OK", "target": "Daftar memilih kolom ringkasan saja (performance-design.md ## Daftar dan Cari)" },
+    { "id": "NFR2.1", "status": "N/A", "target": "ID milik u1-walking-skeleton (cookie sesi); hanya dirujuk sebagai konteks" },
+    { "id": "NFR2.2", "status": "N/A", "target": "ID milik u1-walking-skeleton; hanya dirujuk sebagai konteks" },
+    { "id": "NFR2.3", "status": "OK", "target": "Warisan U1: kredensial lewat environment variable; tidak ada perubahan U2 (security-design.md)" },
+    { "id": "NFR2.4", "status": "OK", "target": "Warisan U1: PostgreSQL internal; tidak ada port baru (logical-components.md ## Perubahan Infrastruktur)" },
+    { "id": "NFR2.5", "status": "OK", "target": "Warisan U1: tanpa masking; log tidak memuat isi langkah (observability-design.md)" },
+    { "id": "NFR2.6", "status": "OK", "target": "Hook onRequest U1 dipakai; mitigasi sementara antrean tulis dan syarat u4 (security-design.md ## Sesi, ## Risiko Tanpa Sesi)" },
+    { "id": "NFR2.7", "status": "OK", "target": "Skema Fastify dan fungsi validasi domain (security-design.md ## Validasi Input)" },
+    { "id": "NFR2.8", "status": "OK", "target": "Lampiran hanya teks, render node teks React (security-design.md ## Lampiran dan Teks)" },
+    { "id": "NFR2.9", "status": "OK", "target": "Kueri berparameter dan escape manual q dengan test wajib (security-design.md ## Kueri Aman)" },
+    { "id": "NFR3.4", "status": "OK", "target": "Satu instance Docker Compose lokal, tanpa layanan eksternal (reliability-design.md, scalability-design.md)" },
+    { "id": "NFR3.5", "status": "OK", "target": "Satu baris log info per aksi tulis dengan impact, body tidak dicatat (observability-design.md ## Logging Terstruktur)" },
+    { "id": "NFR3.6", "status": "OK", "target": "500 dengan detail di log, 400/404/409 sebagai info atau peringatan (observability-design.md, reliability-design.md ## Pemetaan Galat)" },
+    { "id": "NFR4.2", "status": "OK", "target": "Pemicu peningkatan dan tinjau retensi snapshot (scalability-design.md ## Kapasitas dan Pemicu)" },
+    { "id": "NFR4.3", "status": "OK", "target": "withLibraryTx: transaksi tunggal per aksi tulis (reliability-design.md ## Transaksi Atomik)" },
+    { "id": "NFR4.4", "status": "OK", "target": "Tidak ada jalur tulis ke stepSnapshot, test byte demi byte (reliability-design.md ## Snapshot Tidak Tersentuh)" },
+    { "id": "NFR4.5", "status": "OK", "target": "Tabel pemetaan galat termasuk deadlock dan FK (reliability-design.md ## Pemetaan Galat, scalability-design.md ## Konkurensi)" },
+    { "id": "NFR4.6", "status": "OK", "target": "404 bila step sudah tidak ada (reliability-design.md ## Pemetaan Galat)" },
+    { "id": "NFR4.7", "status": "OK", "target": "Indeks unik fungsional lewat migrasi SQL mentah (reliability-design.md ## Keunikan Nama)" }
+  ]
+}
