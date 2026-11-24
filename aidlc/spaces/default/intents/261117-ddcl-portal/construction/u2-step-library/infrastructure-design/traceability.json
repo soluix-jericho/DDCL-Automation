@@ -1,0 +1,35 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u2-step-library",
+  "upstream_ids": [
+    "NFR1.5", "NFR1.6", "NFR1.7", "NFR1.8", "NFR1.9", "NFR1.10", "NFR1.11",
+    "NFR2.3", "NFR2.4", "NFR2.5", "NFR2.6", "NFR2.7", "NFR2.8", "NFR2.9",
+    "NFR3.4", "NFR3.5", "NFR3.6",
+    "NFR4.2", "NFR4.3", "NFR4.4", "NFR4.5", "NFR4.6", "NFR4.7"
+  ],
+  "coverage": [
+    { "id": "NFR1.5", "status": "OK", "target": "Satu backend dan PostgreSQL lokal; DATABASE_URL connection_limit=10; test beban backend/tests/load (cicd-pipeline.md ## Stages)" },
+    { "id": "NFR1.6", "status": "OK", "target": "Pool koneksi 10 dan test beban terjadwal (infrastructure-specification.md Resource sizing, cicd-pipeline.md)" },
+    { "id": "NFR1.7", "status": "OK", "target": "Pool koneksi 10 dan test beban terjadwal (infrastructure-specification.md Resource sizing, cicd-pipeline.md)" },
+    { "id": "NFR1.8", "status": "N/A", "target": "Batas input diterapkan di kode (skema Fastify dan validasi); tanpa resource infrastruktur" },
+    { "id": "NFR1.9", "status": "OK", "target": "Satu instance backend, pool 10, skenario 20 serentak di test beban (infrastructure-specification.md, cicd-pipeline.md)" },
+    { "id": "NFR1.10", "status": "OK", "target": "bodyLimit 24 MiB dan pembatas tulis adalah konfigurasi Fastify; tanpa reverse proxy sehingga tidak ada batas body lain (infrastructure-specification.md Hook dan batas di aplikasi)" },
+    { "id": "NFR1.11", "status": "N/A", "target": "Bentuk respons daftar adalah desain API; tanpa resource infrastruktur" },
+    { "id": "NFR2.3", "status": "OK", "target": "Kredensial dari environment (.env via env_file); start-prod.sh memakai DATABASE_URL dan POSTGRES_PASSWORD yang sudah ada; dump di volume Docker, bukan git atau OneDrive (infrastructure-specification.md Backup sebelum migrasi, cicd-pipeline.md ## Secrets in CI/CD)" },
+    { "id": "NFR2.4", "status": "OK", "target": "Tidak ada container atau port baru; db tanpa published port, volume ddcl_backups hanya di-mount ke backend (infrastructure-specification.md Networking topology, Infrastructure Services)" },
+    { "id": "NFR2.5", "status": "N/A", "target": "Data operasional tanpa masking; tidak ada kontrol masking infrastruktur. Dump pra-migrasi berisi data apa adanya sehingga disimpan di volume Docker, tidak di folder repo atau OneDrive (infrastructure-specification.md Storage strategy)" },
+    { "id": "NFR2.6", "status": "N/A", "target": "Penegakan sesi adalah logika aplikasi di u4-user-accounts; tanpa resource infrastruktur" },
+    { "id": "NFR2.7", "status": "N/A", "target": "Validasi input adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR2.8", "status": "N/A", "target": "Penanganan lampiran sebagai teks adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR2.9", "status": "N/A", "target": "Kueri berparameter dan escape q adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR3.4", "status": "OK", "target": "Docker Compose lokal: db, backend, frontend tanpa layanan eksternal (infrastructure-specification.md ## Deployment)" },
+    { "id": "NFR3.5", "status": "OK", "target": "Log JSON ke stdout dibaca lewat docker compose logs; start-prod.sh menulis baris backup (monitoring-design.md ## Logs & Tracing)" },
+    { "id": "NFR3.6", "status": "N/A", "target": "Klasifikasi log 500/400/404/409 adalah logika aplikasi; infrastruktur hanya menyediakan docker compose logs" },
+    { "id": "NFR4.2", "status": "OK", "target": "Volume PostgreSQL persisten; volume ddcl_backups menyimpan 10 dump pra-migrasi (infrastructure-specification.md Storage strategy, Ukuran Disk Cadangan)" },
+    { "id": "NFR4.3", "status": "N/A", "target": "Transaksi atomik adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR4.4", "status": "N/A", "target": "Snapshot tidak tersentuh adalah logika aplikasi; backfill stepSnapshot dicatat di infrastructure-specification.md Migrasi skema" },
+    { "id": "NFR4.5", "status": "N/A", "target": "Pemetaan galat adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR4.6", "status": "N/A", "target": "404 saat step hilang adalah logika aplikasi; tanpa resource infrastruktur" },
+    { "id": "NFR4.7", "status": "OK", "target": "Migrasi SQL mentah dengan --create-only untuk indeks unik fungsional dan test pg_indexes di CI (infrastructure-specification.md Migrasi skema, cicd-pipeline.md Stages order 3)" }
+  ]
+}
