@@ -7,25 +7,10 @@ export const INITIAL_STATUS = 'Draft' as const;
 /** Skeleton limit: parameter rows the template's first object group can hold (sheet 3, rows 7-23). */
 export const MAX_PARAMETERS = 17;
 
-export interface StepInput {
-  name: string;
-  category: string;
-}
+// Step validation (BR1.1, extended by BR2.1) lives in stepRules.ts since U2.
 
 function isBlank(value: unknown): boolean {
   return typeof value !== 'string' || value.trim() === '';
-}
-
-/** BR1.1: name and category are mandatory; the error names every empty field. */
-export function validateStepInput(input: unknown): StepInput {
-  const body = (input ?? {}) as Record<string, unknown>;
-  const missing: string[] = [];
-  if (isBlank(body.name)) missing.push('name');
-  if (isBlank(body.category)) missing.push('category');
-  if (missing.length > 0) {
-    throw new ValidationError(`Field wajib belum diisi: ${missing.join(', ')}`, missing);
-  }
-  return { name: (body.name as string).trim(), category: (body.category as string).trim() };
 }
 
 export interface HeaderInput {

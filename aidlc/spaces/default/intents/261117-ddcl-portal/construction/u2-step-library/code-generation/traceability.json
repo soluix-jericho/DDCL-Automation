@@ -1,0 +1,308 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-step-library",
+  "upstream_ids": [
+    "AC1.1.1",
+    "AC1.1.2",
+    "AC1.1.3",
+    "AC1.2.1",
+    "AC1.2.2",
+    "AC1.3.1",
+    "AC1.3.2",
+    "AC1.3.3",
+    "AC2.3.1",
+    "NFR1.1",
+    "NFR1.4",
+    "NFR1.5",
+    "NFR1.6",
+    "NFR1.8",
+    "NFR1.7",
+    "NFR1.10",
+    "NFR1.11",
+    "NFR2.1",
+    "NFR2.5",
+    "NFR2.6",
+    "NFR2.2",
+    "NFR2.7",
+    "NFR2.8",
+    "NFR2.9",
+    "NFR2.3",
+    "NFR2.4",
+    "NFR1.9",
+    "NFR4.2",
+    "NFR4.5",
+    "NFR3.4",
+    "NFR4.3",
+    "NFR4.4",
+    "NFR4.6",
+    "NFR4.7",
+    "BR2.1",
+    "BR2.2",
+    "BR2.3",
+    "BR2.4",
+    "BR2.5",
+    "BR2.6",
+    "BR2.7",
+    "BR2.8",
+    "BR2.9",
+    "BR2.10",
+    "BR2.11",
+    "BR2.12",
+    "BR2.13",
+    "BR2.14",
+    "NFR3.5",
+    "NFR3.6"
+  ],
+  "coverage": [
+    {
+      "id": "AC1.1.1",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "AC1.1.2",
+      "status": "OK",
+      "target": "frontend/src/screens/library/DuplicateDialog.tsx"
+    },
+    {
+      "id": "AC1.1.3",
+      "status": "Deferred",
+      "target": "Diganti keputusan pengguna: kategori hanya label dan {variabel} diisi per DDCL (BR2.4, BR2.12); isian per kategori tidak dibangun"
+    },
+    {
+      "id": "AC1.2.1",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    },
+    {
+      "id": "AC1.2.2",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "AC1.3.1",
+      "status": "OK",
+      "target": "frontend/src/screens/library/StepForm.tsx"
+    },
+    {
+      "id": "AC1.3.2",
+      "status": "Deferred",
+      "target": "Penanda di Rollback & Recovery Plan DDCL adalah cakupan u3-ddcl-composition; Library sudah menyediakan penanda Belum ada rollback (BR2.10)"
+    },
+    {
+      "id": "AC1.3.3",
+      "status": "OK",
+      "target": "backend/src/stepSnapshot.ts"
+    },
+    {
+      "id": "AC2.3.1",
+      "status": "Deferred",
+      "target": "Rollback otomatis muncul di DDCL adalah cakupan u3-ddcl-composition (BR2.14)"
+    },
+    {
+      "id": "NFR1.1",
+      "status": "OK",
+      "target": "backend/src/app.ts"
+    },
+    {
+      "id": "NFR1.4",
+      "status": "OK",
+      "target": "backend/src/excel.ts"
+    },
+    {
+      "id": "NFR1.5",
+      "status": "OK",
+      "target": "backend/tests/load/library.load.test.ts"
+    },
+    {
+      "id": "NFR1.6",
+      "status": "Deferred",
+      "target": "Celah diketahui dan diterima pengguna: save step 4 byte maksimum dengan rollbackStep inline menjawab 500 (klien Prisma lambat untuk teks multi-byte); varian ASCII lolos p95 810 ms; tes beban tetap ketat; ditangani di iterasi berikutnya"
+    },
+    {
+      "id": "NFR1.8",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "NFR1.7",
+      "status": "OK",
+      "target": "backend/tests/load/library.load.test.ts"
+    },
+    {
+      "id": "NFR1.10",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    },
+    {
+      "id": "NFR1.11",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "NFR2.1",
+      "status": "OK",
+      "target": "backend/src/config.ts"
+    },
+    {
+      "id": "NFR2.5",
+      "status": "OK",
+      "target": "backend/scripts/start-prod.sh"
+    },
+    {
+      "id": "NFR2.6",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    },
+    {
+      "id": "NFR2.2",
+      "status": "OK",
+      "target": "backend/src/app.ts"
+    },
+    {
+      "id": "NFR2.7",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "NFR2.8",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "NFR2.9",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "NFR2.3",
+      "status": "OK",
+      "target": "docker-compose.yml"
+    },
+    {
+      "id": "NFR2.4",
+      "status": "OK",
+      "target": "docker-compose.yml"
+    },
+    {
+      "id": "NFR1.9",
+      "status": "OK",
+      "target": "backend/src/writeLimiter.ts"
+    },
+    {
+      "id": "NFR4.2",
+      "status": "OK",
+      "target": "backend/scripts/start-prod.sh"
+    },
+    {
+      "id": "NFR4.5",
+      "status": "OK",
+      "target": "backend/src/app.ts"
+    },
+    {
+      "id": "NFR3.4",
+      "status": "OK",
+      "target": "docker-compose.yml"
+    },
+    {
+      "id": "NFR4.3",
+      "status": "OK",
+      "target": "backend/src/libraryTx.ts"
+    },
+    {
+      "id": "NFR4.4",
+      "status": "OK",
+      "target": "backend/tests/u2/snapshot.test.ts"
+    },
+    {
+      "id": "NFR4.6",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    },
+    {
+      "id": "NFR4.7",
+      "status": "OK",
+      "target": "backend/prisma/migrations/20261124000000_u2_step_library/migration.sql"
+    },
+    {
+      "id": "BR2.1",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "BR2.2",
+      "status": "OK",
+      "target": "frontend/src/screens/library/ColumnsEditor.tsx"
+    },
+    {
+      "id": "BR2.3",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.4",
+      "status": "OK",
+      "target": "backend/src/stepText.ts"
+    },
+    {
+      "id": "BR2.5",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "BR2.6",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.7",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.8",
+      "status": "OK",
+      "target": "backend/src/stepSnapshot.ts"
+    },
+    {
+      "id": "BR2.9",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.10",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.11",
+      "status": "OK",
+      "target": "backend/src/bundleRepository.ts"
+    },
+    {
+      "id": "BR2.12",
+      "status": "OK",
+      "target": "backend/src/stepRules.ts"
+    },
+    {
+      "id": "BR2.13",
+      "status": "OK",
+      "target": "backend/src/stepRepository.ts"
+    },
+    {
+      "id": "BR2.14",
+      "status": "Deferred",
+      "target": "Rollback bundle ditetapkan untuk u3-ddcl-composition; tafsir Q11 perlu ditanyakan ulang di Functional Design U3"
+    },
+    {
+      "id": "NFR3.5",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    },
+    {
+      "id": "NFR3.6",
+      "status": "OK",
+      "target": "backend/src/libraryRoutes.ts"
+    }
+  ]
+}

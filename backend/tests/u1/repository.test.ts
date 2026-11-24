@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DatabaseUnavailable, NotFoundError } from '../../src/errors';
 import { createRepository } from '../../src/repository';
 import { createTestPrisma, createUnreachablePrisma, truncateAll } from '../helpers/db';
+import { stepBody } from '../u2/helpers';
 
 let prisma: PrismaClient;
 let repo: ReturnType<typeof createRepository>;
@@ -20,8 +21,8 @@ beforeEach(async () => {
 
 describe('repository', () => {
   it('creates a step and lists it back', async () => {
-    const step = await repo.createStep({ name: 'Update Image', category: 'Image' });
-    expect(step).toMatchObject({ name: 'Update Image', category: 'Image', kind: 'forward' });
+    const step = await repo.createStep(stepBody({ name: 'Update Image', category: 'Database' }));
+    expect(step).toMatchObject({ name: 'Update Image', category: 'Database', kind: 'forward' });
     const list = await repo.listSteps();
     expect(list.map((s) => s.id)).toEqual([step.id]);
   });
@@ -39,7 +40,7 @@ describe('repository', () => {
   });
 
   it('adds a checklist item with order 1 and reads it back for export', async () => {
-    const step = await repo.createStep({ name: 'Update Image', category: 'Image' });
+    const step = await repo.createStep(stepBody({ name: 'Update Image', category: 'Database' }));
     const d = await repo.createDdcl({ title: 'T', releaseHeader: {} });
     const item = await repo.addChecklistItem(d.id, {
       stepId: step.id,
@@ -57,7 +58,7 @@ describe('repository', () => {
   });
 
   it('rejects checklist items for a missing DDCL or missing step with NotFoundError', async () => {
-    const step = await repo.createStep({ name: 'S', category: 'C' });
+    const step = await repo.createStep(stepBody({ name: 'S', category: 'Database' }));
     await expect(
       repo.addChecklistItem('missing', { stepId: step.id, parameterValues: null }),
     ).rejects.toBeInstanceOf(NotFoundError);

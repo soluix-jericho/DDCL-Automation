@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Ddcl, listSteps, Step } from './api';
 import { ComposeScreen } from './screens/ComposeScreen';
 import { ExportScreen } from './screens/ExportScreen';
@@ -19,11 +19,19 @@ export function App() {
   const [itemAdded, setItemAdded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // The compose screen picks from the full Library; reload it whenever the Library screen changes something.
+  const loadSteps = useCallback(() => {
     listSteps()
-      .then(setSteps)
+      .then((list) => {
+        setSteps(list);
+        setLoadError(null);
+      })
       .catch((err: Error) => setLoadError(err.message));
   }, []);
+
+  useEffect(() => {
+    loadSteps();
+  }, [loadSteps]);
 
   return (
     <main>
@@ -47,7 +55,7 @@ export function App() {
         </p>
       )}
       {tab === 'library' && (
-        <LibraryScreen steps={steps} onStepCreated={(s) => setSteps((prev) => [...prev, s])} />
+        <LibraryScreen onLibraryChanged={loadSteps} />
       )}
       {tab === 'compose' && (
         <ComposeScreen

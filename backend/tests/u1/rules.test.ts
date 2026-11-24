@@ -7,8 +7,8 @@ import {
   tabLabel,
   validateChecklistInput,
   validateDdclInput,
-  validateStepInput,
 } from '../../src/rules';
+import { validateStepBody } from '../../src/stepRules';
 
 function fieldsOf(fn: () => unknown): string[] {
   try {
@@ -20,31 +20,37 @@ function fieldsOf(fn: () => unknown): string[] {
   return [];
 }
 
-describe('step validation (BR1.1)', () => {
-  it('accepts name and category and trims them', () => {
-    expect(validateStepInput({ name: ' Update Image ', category: ' Image ' })).toEqual({
-      name: 'Update Image',
-      category: 'Image',
-    });
+// BR1.1 (name and category mandatory, the error names every bad field) is now enforced by
+// validateStepBody (BR2.1); the same behaviours are checked here against the new validator.
+describe('step validation (BR1.1, extended by BR2.1)', () => {
+  const lines = [{ lines: ['x'] }];
+
+  it('accepts name and category and trims the name', () => {
+    expect(
+      validateStepBody({ name: ' Update Image ', category: 'Database', kind: 'forward', columns: lines }, 'create'),
+    ).toMatchObject({ name: 'Update Image', category: 'Database' });
   });
 
   it('names both fields when both are empty', () => {
-    expect(fieldsOf(() => validateStepInput({ name: '', category: '  ' }))).toEqual([
-      'name',
+    expect(
+      fieldsOf(() => validateStepBody({ name: '', category: '  ', kind: 'forward', columns: lines }, 'create')),
+    ).toEqual(['name', 'category']);
+  });
+
+  it('names only name when only the name is empty', () => {
+    expect(
+      fieldsOf(() => validateStepBody({ name: '', category: 'Database', kind: 'forward', columns: lines }, 'create')),
+    ).toEqual(['name']);
+  });
+
+  it('names only category when only the category is missing', () => {
+    expect(fieldsOf(() => validateStepBody({ name: 'X', kind: 'forward', columns: lines }, 'create'))).toEqual([
       'category',
     ]);
   });
 
-  it('names only name when only the name is empty', () => {
-    expect(fieldsOf(() => validateStepInput({ name: '', category: 'Image' }))).toEqual(['name']);
-  });
-
-  it('names only category when only the category is empty', () => {
-    expect(fieldsOf(() => validateStepInput({ name: 'X' }))).toEqual(['category']);
-  });
-
-  it('treats a missing or non-object body as all fields empty', () => {
-    expect(fieldsOf(() => validateStepInput(undefined))).toEqual(['name', 'category']);
+  it('rejects a non-object body', () => {
+    expect(fieldsOf(() => validateStepBody(undefined, 'create'))).toEqual(['body']);
   });
 });
 

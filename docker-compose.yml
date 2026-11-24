@@ -27,11 +27,20 @@ services:
       TEST_DATABASE_URL: ${TEST_DATABASE_URL:-}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
       DDCL_TEMPLATE_PATH: ${DDCL_TEMPLATE_PATH:-/app/template/DDCL BCAS PROD 202611 - TEMPLATE.xlsx}
+      # libpq settings for scripts/start-prod.sh (psql, pg_dump). Not DATABASE_URL: it carries Prisma-only options.
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_KEEP: ${BACKUP_KEEP:-10}
     ports:
       - '${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}'
     volumes:
       # Template Excel is not in git: put it in ./template/ on the host (read-only in the container).
       - ./template:/app/template:ro
+      # Pre-migration dumps. A named volume, not a folder in the repo: the dumps hold unmasked operational
+      # data and must not be synced by OneDrive or committed. `docker compose down -v` deletes it.
+      - ddcl_backups:/backups
     depends_on:
       db:
         condition: service_healthy
@@ -47,7 +56,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 20s
+      # A pre-migration dump and the migration itself can take minutes on a large database.
+      start_period: 300s
     restart: unless-stopped
 
   frontend:
@@ -75,3 +85,4 @@ services:
 
 volumes:
   ddcl_pgdata:
+  ddcl_backups:

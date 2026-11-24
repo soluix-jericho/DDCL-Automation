@@ -17,6 +17,37 @@ export class NotFoundError extends Error {
   }
 }
 
+/** BR2.3 / BR2.11: a unique name is already taken. `existing` is the full row so the screen can compare. */
+export class ConflictError extends Error {
+  constructor(
+    message: string,
+    public readonly existing: unknown,
+    public readonly conflictOn: 'step' | 'rollbackStep' | 'bundle',
+  ) {
+    super(message);
+    this.name = 'ConflictError';
+  }
+}
+
+/** Overload protection: the write limiter is full or the connection pool is exhausted (503). */
+export class ServiceBusyError extends Error {
+  constructor(
+    public readonly reason: 'write-limit' | 'pool',
+    public readonly retryAfterSeconds = 2,
+  ) {
+    super(`Service busy: ${reason}`);
+    this.name = 'ServiceBusyError';
+  }
+}
+
+/** A Library transaction kept deadlocking or its lock set kept changing; the client may try again (409). */
+export class RetryExhausted extends Error {
+  constructor(operation: string) {
+    super(`Library transaction ${operation} could not complete after retries`);
+    this.name = 'RetryExhausted';
+  }
+}
+
 /** Database unreachable. Original detail is kept in `cause` for server logs only (BR1.5). */
 export class DatabaseUnavailable extends Error {
   constructor(

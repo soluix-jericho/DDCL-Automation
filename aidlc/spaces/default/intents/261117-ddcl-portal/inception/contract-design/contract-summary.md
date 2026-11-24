@@ -95,9 +95,20 @@ paths:
         StepLibrary maupun DdclDocument (ADR-002) — endpoint memanggil
         StepLibrary untuk daftar step lalu DdclDocument untuk menghitung
         pemakaian per step, dan menggabungkan hasilnya sebelum dikirim.
+        Diperbarui di u2-step-library (Code Generation): daftar hanya memuat
+        ringkasan (tanpa teks langkah dan isi lampiran, NFR1.11); isi penuh lewat
+        `GET /api/v1/steps/{id}`. Pencarian dan filter dilakukan di server (BR2.13).
+      parameters:
+        - name: q
+          in: query
+          description: Cari nama (tanpa membedakan huruf besar/kecil, maksimal 200 karakter); `%`, `_`, dan `\` dicocokkan apa adanya
+          schema: { type: string, maxLength: 200 }
+        - name: category
+          in: query
+          schema: { type: string, enum: [Database, Bastion, RabbitMQ, Keycloak] }
       responses:
         "200":
-          description: Daftar step
+          description: Daftar ringkasan step (kosong bila tidak ada yang cocok, bukan error)
           content:
             application/json:
               schema:
@@ -110,46 +121,182 @@ paths:
                     category: { type: string }
                     kind: { type: string, enum: [forward, rollback] }
                     pairedRollbackStepId: { type: string, nullable: true }
-                    usageCount: { type: integer }
+                    columnCount: { type: integer }
+                    attachmentCount: { type: integer }
+                    usageCount: { type: integer, description: Jumlah DDCL berbeda yang memakai step (BR2.6) }
+                    missingRollback: { type: boolean, description: "Forward tanpa pasangan rollback (BR2.10)" }
+        "400":
+          description: Parameter `q` atau `category` tidak sah
     post:
       summary: Buat step baru (FR2.2 — juga dipanggil dari layar komposisi DDCL)
+      description: >-
+        Batas input (NFR1.8): maksimal 10 kolom, 50 langkah per kolom, 2.000 karakter per
+        langkah, nama 200 karakter, label kolom 200, maksimal 10 lampiran (nama file 255
+        karakter, isi 102.400 byte UTF-8). Kurung kurawal di teks langkah: `{nama}` adalah
+        variabel, `{{` dan `}}` kurung literal, selain itu ditolak (BR2.4). `bodyLimit` rute
+        tulis Library 24 MiB; lebih dari itu 413. Maksimal 4 permintaan tulis serentak;
+        yang ke-5 dijawab 503 dengan `Retry-After: 2` tanpa membaca body.
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [name, category, kind]
+              required: [name, category, kind, columns]
               properties:
                 name: { type: string }
-                category: { type: string }
+                category: { type: string, enum: [Database, Bastion, RabbitMQ, Keycloak] }
                 kind: { type: string, enum: [forward, rollback] }
-                pairedRollbackStepId: { type: string, nullable: true }
+                columns:
+                  type: array
+                  description: Kolom berurutan; langkah dan kolom kosong dibuang sebelum disimpan, minimal satu langkah tersisa
+                  items:
+                    type: object
+                    properties:
+                      label: { type: string, nullable: true }
+                      lines: { type: array, items: { type: string } }
+                attachments:
+                  type: array
+                  items:
+                    type: object
+                    required: [filename, content]
+                    properties:
+                      filename: { type: string, description: "Tanpa / \\ atau .., unik tanpa membedakan huruf besar/kecil" }
+                      content: { type: string }
+                pairedRollbackStepId: { type: string, nullable: true, description: Hanya untuk kind forward; menunjuk step rollback yang ada }
+                rollbackStep:
+                  type: object
+                  description: Isi lengkap step rollback baru yang dibuat dan dipasangkan atomik (tanpa pairedRollbackStepId)
       responses:
         "201":
-          description: Step dibuat
+          description: Step dibuat; respons memuat step penuh (id, name, category, kind, pairedRollbackStepId, columns, attachments, variables, createdAt, updatedAt)
+        "400":
+          description: "Validasi gagal; `fields` memuat path field bermasalah, mis. `columns[1].lines[0]`, `rollbackStep.name`"
         "409":
-          description: Nama step duplikat di kategori yang sama
+          description: >-
+            Nama sama dengan step lain yang kategori dan jenisnya sama (tanpa membedakan huruf besar/kecil).
+            Memuat `existing` (isi penuh step yang ada) dan `conflictOn` (`step` atau `rollbackStep`). Tidak ada step tersimpan.
+            Juga dipakai untuk `error: retry` (benturan transaksi setelah pengulangan; coba simpan lagi)
+        "413":
+          description: Body melebihi 24 MiB
+        "503":
+          description: Terlalu banyak penulisan serentak atau pool koneksi habis; `Retry-After: 2`. Klien tidak mengulang otomatis
   /api/v1/steps/categories:
     get:
-      summary: Skema kategori object/parameter per jenis step (FR2.1)
+      summary: Daftar kategori tetap (FR2.1, BR2.12) — hanya label pengelompokan
+      description: >-
+        Bentuk berubah dari rancangan awal ("skema kategori object/parameter per jenis step"):
+        kini array `{ name }` untuk empat kategori tanpa daftar isian. Isian yang diminta saat step
+        dipasang mengikuti variabel `{nama}` di teks langkah (keputusan Q10). Tidak ada pemakai
+        endpoint ini di U1.
       responses:
         "200":
-          description: Daftar kategori dan field object/parameter-nya
+          description: "[{ name: Database }, { name: Bastion }, { name: RabbitMQ }, { name: Keycloak }]"
   /api/v1/steps/{id}:
+    get:
+      summary: Isi penuh satu step (kolom, langkah, lampiran, variabel turunan)
+      responses:
+        "200":
+          description: Step penuh
+        "404":
+          description: Step tidak ditemukan
     patch:
       summary: Edit step, termasuk menetapkan/mengedit pasangan rollback (US1.3)
+      description: >-
+        Mengganti seluruh kolom, langkah, dan lampiran dalam satu transaksi (terakhir menang). Body sama
+        dengan POST, tetapi `kind` boleh dihilangkan dan tidak bisa diubah (400, field `kind`). `pairedRollbackStepId`
+        dihilangkan = pasangan tidak berubah, `null` = pasangan dikosongkan, id = pasangan diganti. DDCL yang sudah
+        memakai step ini tidak berubah (snapshot per item checklist, BR2.8).
       responses:
         "200":
-          description: Step diperbarui
+          description: Step diperbarui (step penuh)
+        "400":
+          description: Validasi gagal
         "404":
           description: Step tidak ditemukan
+        "409":
+          description: Nama bentrok dengan step lain (isi seperti POST), atau benturan transaksi
+        "413":
+          description: Body melebihi 24 MiB
+        "503":
+          description: Terlalu banyak penulisan serentak atau pool koneksi habis
     delete:
       summary: Hapus step dari Library (FR2.4 — tidak menyentuh DDCL yang sudah memakai snapshotnya)
+      description: >-
+        Selalu diizinkan bila step ada (BR2.7). Mengosongkan pairedRollbackStepId pada step forward yang menunjuknya,
+        mengeluarkannya dari bundle (bundle yang kehilangan anggota forward terakhir ikut dihapus), dan mengosongkan
+        `stepId` item checklist tanpa menyentuh `stepSnapshot`. Diubah dari rancangan awal: 200 dengan laporan dampak
+        (bukan 204), sesuai "respons melaporkan dampaknya".
       responses:
-        "204":
-          description: Step dihapus dari Library
+        "200":
+          description: "{ id, impact: { usageCount, checklistItems, bundlesRemoved: [{id,name}], bundlesChanged: [{id,name}], pairLost: [{id,name}] } }"
+        "404":
+          description: Step tidak ditemukan (juga bila dihapus orang lain lebih dulu)
+        "503":
+          description: Terlalu banyak penulisan serentak atau pool koneksi habis
+  /api/v1/steps/{id}/impact:
+    get:
+      summary: Pratinjau dampak penghapusan (hanya baca), dipakai layar sebelum konfirmasi (Alur 4 langkah 1)
+      responses:
+        "200":
+          description: Objek `impact` yang sama dengan hasil DELETE
         "404":
           description: Step tidak ditemukan
+  /api/v1/bundles:
+    get:
+      summary: Daftar bundle (ringkasan) dengan `q` dan `category` seperti daftar step (BR2.13)
+      responses:
+        "200":
+          description: "[{ id, name, category, forwardCount, rollbackCount, createdAt, updatedAt }]"
+    post:
+      summary: Buat bundle (BR2.11) — step forward berurutan dan rangkaian rollback berurutan sendiri, jumlah boleh berbeda
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, forwardStepIds]
+              properties:
+                name: { type: string, maxLength: 200 }
+                category: { type: string, nullable: true, enum: [Database, Bastion, RabbitMQ, Keycloak] }
+                forwardStepIds: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: "Step ber-kind forward; urutan = urutan simpan" }
+                rollbackStepIds: { type: array, maxItems: 50, items: { type: string }, description: "Step ber-kind rollback; boleh kosong dan boleh berbeda jumlahnya" }
+      responses:
+        "201":
+          description: Bundle penuh (anggota forward dan rollback berurutan, masing-masing dengan isi penuh step)
+        "400":
+          description: Nama kosong, tidak ada anggota forward, anggota salah jenis atau tidak ada, atau step ganda
+        "409":
+          description: Nama bundle sama (tanpa membedakan huruf besar/kecil); memuat `existing` dan `conflictOn` = bundle
+        "413":
+          description: Body melebihi 24 MiB
+        "503":
+          description: Terlalu banyak penulisan serentak atau pool koneksi habis
+  /api/v1/bundles/{id}:
+    get:
+      summary: Bundle penuh untuk dibaca U3 (BR2.14) — rollback bundle berdiri sendiri, dalam urutan tersimpan
+      responses:
+        "200":
+          description: "{ id, name, category, forward: [step penuh], rollback: [step penuh], createdAt, updatedAt }"
+        "404":
+          description: Bundle tidak ditemukan
+    patch:
+      summary: Ubah nama, kategori, anggota, dan urutan bundle (body sama dengan POST)
+      responses:
+        "200":
+          description: Bundle penuh
+        "400":
+          description: Validasi gagal
+        "404":
+          description: Bundle tidak ditemukan
+        "409":
+          description: Nama bentrok dengan bundle lain
+    delete:
+      summary: Hapus bundle (step di dalamnya tidak ikut terhapus)
+      responses:
+        "200":
+          description: "{ id, name, forwardCount, rollbackCount }"
+        "404":
+          description: Bundle tidak ditemukan
 ```
 
 ## Contract 3 — DDCL Composition API (u3-ddcl-composition)

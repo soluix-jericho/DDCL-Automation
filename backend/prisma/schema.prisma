@@ -27,6 +27,82 @@ model Step {
   pairedRollbackStep   Step?           @relation("StepRollbackPair", fields: [pairedRollbackStepId], references: [id])
   pairedForwardSteps   Step[]          @relation("StepRollbackPair")
   checklistItems       ChecklistItem[]
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  columns              StepColumn[]
+  attachments          StepAttachment[]
+  forwardMemberships   BundleForwardMember[]
+  rollbackMemberships  BundleRollbackMember[]
+
+  @@index([pairedRollbackStepId])
+}
+
+// The case-insensitive unique indexes step_name_unique and bundle_name_unique
+// (lower(btrim(name)), ...) exist only in the SQL migration: Prisma cannot express them.
+model StepColumn {
+  id       String     @id @default(cuid())
+  stepId   String
+  step     Step       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  position Int
+  label    String?
+  lines    StepLine[]
+
+  @@unique([stepId, position])
+}
+
+model StepLine {
+  id       String     @id @default(cuid())
+  columnId String
+  column   StepColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  position Int
+  text     String     @db.Text
+
+  @@unique([columnId, position])
+}
+
+model StepAttachment {
+  id       String @id @default(cuid())
+  stepId   String
+  step     Step   @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  filename String
+  content  String @db.Text
+  position Int
+
+  @@unique([stepId, filename])
+}
+
+model StepBundle {
+  id              String                 @id @default(cuid())
+  name            String
+  category        String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  forwardMembers  BundleForwardMember[]
+  rollbackMembers BundleRollbackMember[]
+}
+
+model BundleForwardMember {
+  bundleId String
+  bundle   StepBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  stepId   String
+  step     Step       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  position Int
+
+  @@id([bundleId, stepId])
+  @@unique([bundleId, position])
+  @@index([stepId])
+}
+
+model BundleRollbackMember {
+  bundleId String
+  bundle   StepBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  stepId   String
+  step     Step       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  position Int
+
+  @@id([bundleId, stepId])
+  @@unique([bundleId, position])
+  @@index([stepId])
 }
 
 model DdclDocument {
@@ -56,8 +132,11 @@ model ChecklistItem {
   id              String       @id @default(cuid())
   ddclId          String
   ddcl            DdclDocument @relation(fields: [ddclId], references: [id])
-  stepId          String
-  step            Step         @relation(fields: [stepId], references: [id])
+  stepId          String?
+  step            Step?        @relation(fields: [stepId], references: [id], onDelete: Restrict)
   order           Int          @default(1)
   parameterValues Json?
+  stepSnapshot    Json
+
+  @@index([stepId])
 }

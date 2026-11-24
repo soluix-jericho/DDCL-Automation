@@ -1,0 +1,29 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-step-library",
+  "version": 1,
+  "writes": [
+    { "path": "aidlc/spaces/default/intents/261117-ddcl-portal/inception/contract-design/contract-summary.md" },
+    { "path": ".gitattributes" },
+    { "path": ".env.example" },
+    { "path": "README.md" },
+    { "path": "docker-compose.yml" },
+    { "path": ".github/workflows/load-test.yml" },
+    { "path": "backend/Dockerfile" },
+    { "path": "backend/package.json" },
+    { "path": "backend/tsconfig.json" },
+    { "path": "backend/vitest.config.ts" },
+    { "path": "backend/vitest.load.config.ts" },
+    { "path": "backend/scripts/" },
+    { "path": "backend/prisma/schema.prisma" },
+    { "path": "backend/prisma/migrations/20261124000000_u2_step_library/" },
+    { "path": "backend/src/" },
+    { "path": "backend/tests/" },
+    { "path": "frontend/package.json" },
+    { "path": "frontend/package-lock.json" },
+    { "path": "frontend/tailwind.config.js" },
+    { "path": "frontend/postcss.config.js" },
+    { "path": "frontend/src/" },
+    { "path": "frontend/tests/" }
+  ]
+}

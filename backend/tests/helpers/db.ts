@@ -24,7 +24,7 @@ export function createTestPrisma(): PrismaClient {
 /** Empties every table so each test starts from a clean state. */
 export async function truncateAll(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "ChecklistItem", "ReleaseHeader", "DdclDocument", "Step" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "ChecklistItem", "ReleaseHeader", "DdclDocument", "BundleForwardMember", "BundleRollbackMember", "StepBundle", "StepAttachment", "StepLine", "StepColumn", "Step" RESTART IDENTITY CASCADE',
   );
 }
 

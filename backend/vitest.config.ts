@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Load tests run separately (vitest.load.config.ts); node_modules is repeated because `exclude` replaces the default.
+    exclude: ['**/node_modules/**', 'tests/load/**'],
     globalSetup: ['./tests/global-setup.ts'],
     // Integration tests share one PostgreSQL database and truncate tables, so files run serially.
     fileParallelism: false,

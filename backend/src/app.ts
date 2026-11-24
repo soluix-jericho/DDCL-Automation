@@ -7,26 +7,35 @@ import Fastify, {
   FastifyServerOptions,
 } from 'fastify';
 import type { AppConfig } from './config';
-import { DatabaseUnavailable, NotFoundError, TemplateUnavailable, ValidationError } from './errors';
+import { Prisma } from '@prisma/client';
+import {
+  ConflictError,
+  DatabaseUnavailable,
+  NotFoundError,
+  RetryExhausted,
+  ServiceBusyError,
+  TemplateUnavailable,
+  ValidationError,
+} from './errors';
 import { exportDdclToXlsx } from './excel';
 import type { Repository } from './repository';
-import {
-  tabLabel,
-  validateChecklistInput,
-  validateDdclInput,
-  validateStepInput,
-} from './rules';
+import { registerLibraryRoutes } from './libraryRoutes';
+import { tabLabel, validateChecklistInput, validateDdclInput } from './rules';
+import { createWriteLimiter, WriteLimiter } from './writeLimiter';
 
 export const SESSION_COOKIE = 'ddcl_session';
 export const STUB_SESSION_VALUE = 'dev-session';
 export const GENERIC_ERROR_MESSAGE = 'Terjadi kesalahan pada server. Silakan coba lagi.';
-export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const BUSY_MESSAGE = 'Server sedang sibuk. Coba lagi sebentar lagi.';
+export const XLSX_MIME ='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export interface BuildAppOptions {
   repo: Repository;
   config: AppConfig;
   /** Pino options or false to silence logs (tests). Default: JSON logs to stdout (OBS1.1). */
   logger?: Record<string, unknown> | boolean;
+  /** Library write limiter; tests pass their own to observe slots. Default: 4 concurrent writes. */
+  writeLimiter?: WriteLimiter;
 }
 
 const defaultLogger = {
@@ -49,6 +58,8 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   const app = Fastify({
     logger: (opts.logger ?? defaultLogger) as FastifyServerOptions['logger'],
   });
+
+  repo.setWarnSink((obj, msg) => app.log.warn(obj, msg));
 
   await app.register(cors, {
     origin: config.frontendOrigin,
@@ -80,6 +91,39 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
     if (err instanceof NotFoundError) {
       return reply.code(404).send({ error: 'not_found', message: err.message });
     }
+    if (err instanceof ConflictError) {
+      request.log.info({ conflictOn: err.conflictOn, path: request.url }, 'Library name conflict');
+      return reply
+        .code(409)
+        .send({ error: 'conflict', message: err.message, existing: err.existing, conflictOn: err.conflictOn });
+    }
+    if (err instanceof RetryExhausted) {
+      request.log.warn({ path: request.url, method: request.method }, err.message);
+      return reply.code(409).send({
+        error: 'retry',
+        message: 'Penyimpanan bentrok dengan perubahan lain. Coba simpan lagi.',
+      });
+    }
+    if (err instanceof ServiceBusyError) {
+      request.log.warn({ reason: err.reason, path: request.url }, 'Library request rejected: service busy');
+      return reply
+        .code(503)
+        .header('Retry-After', String(err.retryAfterSeconds))
+        .send({ error: 'service_busy', message: BUSY_MESSAGE });
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2003') {
+        // A step (or other row) the request pointed at was deleted a moment ago.
+        return reply.code(404).send({ error: 'not_found', message: 'Data yang dirujuk sudah tidak ada.' });
+      }
+      if (err.code === 'P2024') {
+        request.log.warn({ reason: 'pool', path: request.url }, 'Library request rejected: pool exhausted');
+        return reply
+          .code(503)
+          .header('Retry-After', '2')
+          .send({ error: 'service_busy', message: BUSY_MESSAGE });
+      }
+    }
     if (err instanceof TemplateUnavailable) {
       logBoundaryError(request, err.originalCause ?? err, 'exportDdcl', 'Excel template unavailable');
       return reply.code(500).send({
@@ -92,6 +136,9 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
       return reply.code(500).send({ error: 'internal_error', message: GENERIC_ERROR_MESSAGE });
     }
     const status = (err as { statusCode?: number }).statusCode;
+    if (status === 413) {
+      return reply.code(413).send({ error: 'payload_too_large', message: 'Data yang dikirim terlalu besar.' });
+    }
     if (typeof status === 'number' && status >= 400 && status < 500) {
       return reply.code(status).send({ error: 'bad_request', message: 'Permintaan tidak valid.' });
     }
@@ -111,12 +158,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
 
   await app.register(
     async (api) => {
-      api.post('/steps', async (request, reply) => {
-        const input = validateStepInput(request.body);
-        return reply.code(201).send(await repo.createStep(input));
-      });
-
-      api.get('/steps', async () => repo.listSteps());
+      registerLibraryRoutes(api, { repo, limiter: opts.writeLimiter ?? createWriteLimiter() });
 
       api.post('/ddcls', async (request, reply) => {
         const input = validateDdclInput(request.body);

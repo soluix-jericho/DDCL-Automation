@@ -1,6 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { DatabaseUnavailable, NotFoundError } from './errors';
-import { ChecklistInput, DdclInput, DEFAULT_CREATED_BY, INITIAL_STATUS, StepInput } from './rules';
+import { isConnectionError, withDb } from './db';
+import { NotFoundError } from './errors';
+import { ChecklistInput, DdclInput, DEFAULT_CREATED_BY, INITIAL_STATUS } from './rules';
+import { createBundleRepository } from './bundleRepository';
+import { createStepRepository, RepoContext } from './stepRepository';
+import { buildStepSnapshot, StepSnapshot } from './stepSnapshot';
 
 export interface StepRecord {
   id: string;
@@ -23,7 +27,8 @@ export interface HeaderRecord {
 export interface ChecklistItemRecord {
   id: string;
   ddclId: string;
-  stepId: string;
+  /** Null once the step was deleted from the Library; the snapshot below still describes it. */
+  stepId: string | null;
   order: number;
   parameterValues: Record<string, string> | null;
   step?: StepRecord;
@@ -39,24 +44,7 @@ export interface DdclRecord {
   checklistItems: ChecklistItemRecord[];
 }
 
-const CONNECTION_CODES = new Set(['P1000', 'P1001', 'P1002', 'P1003', 'P1008', 'P1017']);
-
-/** True for errors meaning "the database cannot be reached" (as opposed to a bug or bad data). */
-export function isConnectionError(err: unknown): boolean {
-  if (err instanceof Prisma.PrismaClientInitializationError) return true;
-  if (err instanceof Prisma.PrismaClientKnownRequestError) return CONNECTION_CODES.has(err.code);
-  return false;
-}
-
-/** Runs a database operation; connection failures become `DatabaseUnavailable` (BR1.5, OBS1.2). */
-export async function withDb<T>(operation: string, fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    if (isConnectionError(err)) throw new DatabaseUnavailable(operation, err);
-    throw err;
-  }
-}
+export { isConnectionError, withDb };
 
 function dateOut(d: Date | null): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
@@ -70,24 +58,19 @@ function statusOut(status: string): string {
   return status === 'SudahDikirim' ? 'Sudah Dikirim' : status;
 }
 
-function toStep(s: {
-  id: string;
-  name: string;
-  category: string;
-  kind: string;
-  pairedRollbackStepId: string | null;
-}): StepRecord {
+/** The step as the DDCL sees it: always read from the item's own snapshot (BR2.8), never from the Library. */
+function stepFromSnapshot(snap: StepSnapshot): StepRecord {
   return {
-    id: s.id,
-    name: s.name,
-    category: s.category,
-    kind: s.kind as StepRecord['kind'],
-    pairedRollbackStepId: s.pairedRollbackStepId,
+    id: snap.id,
+    name: snap.name,
+    category: snap.category,
+    kind: snap.kind,
+    pairedRollbackStepId: snap.pairedRollback?.id ?? null,
   };
 }
 
 type DdclWithRelations = Prisma.DdclDocumentGetPayload<{
-  include: { releaseHeader: true; checklistItems: { include: { step: true } } };
+  include: { releaseHeader: true; checklistItems: true };
 }>;
 
 function toDdcl(d: DdclWithRelations): DdclRecord {
@@ -117,7 +100,7 @@ function toDdcl(d: DdclWithRelations): DdclRecord {
         stepId: c.stepId,
         order: c.order,
         parameterValues: (c.parameterValues as Record<string, string> | null) ?? null,
-        step: toStep(c.step),
+        step: stepFromSnapshot(c.stepSnapshot as unknown as StepSnapshot),
       })),
   };
 }
@@ -125,20 +108,19 @@ function toDdcl(d: DdclWithRelations): DdclRecord {
 export function createRepository(prisma: PrismaClient) {
   const include = {
     releaseHeader: true,
-    checklistItems: { include: { step: true } },
+    checklistItems: true,
   } as const;
 
-  return {
-    createStep(input: StepInput): Promise<StepRecord> {
-      return withDb('createStep', async () =>
-        toStep(await prisma.step.create({ data: { name: input.name, category: input.category } })),
-      );
-    },
+  // Warnings from Library transactions (deadlock retries) go to whatever logger the app attaches.
+  let warnSink: RepoContext['warn'] = () => undefined;
+  const ctx: RepoContext = { warn: (obj, msg) => warnSink(obj, msg) };
 
-    listSteps(): Promise<StepRecord[]> {
-      return withDb('listSteps', async () =>
-        (await prisma.step.findMany({ orderBy: { name: 'asc' } })).map(toStep),
-      );
+  return {
+    ...createStepRepository(prisma, ctx),
+    ...createBundleRepository(prisma, ctx),
+
+    setWarnSink(sink: RepoContext['warn']): void {
+      warnSink = sink;
     },
 
     /** Creates the document and its header in one transaction (nested create is atomic). */
@@ -171,20 +153,22 @@ export function createRepository(prisma: PrismaClient) {
 
     addChecklistItem(ddclId: string, input: ChecklistInput): Promise<ChecklistItemRecord> {
       return withDb('addChecklistItem', async () => {
-        const [ddcl, step] = await Promise.all([
-          prisma.ddclDocument.findUnique({ where: { id: ddclId }, select: { id: true } }),
-          prisma.step.findUnique({ where: { id: input.stepId }, select: { id: true } }),
-        ]);
-        if (!ddcl) throw new NotFoundError(`DDCL tidak ditemukan: ${ddclId}`);
-        if (!step) throw new NotFoundError(`Step tidak ditemukan: ${input.stepId}`);
-        const count = await prisma.checklistItem.count({ where: { ddclId } });
-        const created = await prisma.checklistItem.create({
-          data: {
-            ddclId,
-            stepId: input.stepId,
-            order: count + 1,
-            parameterValues: input.parameterValues ?? Prisma.DbNull,
-          },
+        // BR2.8: reading the step, snapshotting it and creating the item happen in one transaction.
+        const created = await prisma.$transaction(async (tx) => {
+          const ddcl = await tx.ddclDocument.findUnique({ where: { id: ddclId }, select: { id: true } });
+          if (!ddcl) throw new NotFoundError(`DDCL tidak ditemukan: ${ddclId}`);
+          const snapshot = await buildStepSnapshot(tx, input.stepId);
+          if (!snapshot) throw new NotFoundError(`Step tidak ditemukan: ${input.stepId}`);
+          const count = await tx.checklistItem.count({ where: { ddclId } });
+          return tx.checklistItem.create({
+            data: {
+              ddclId,
+              stepId: input.stepId,
+              order: count + 1,
+              parameterValues: input.parameterValues ?? Prisma.DbNull,
+              stepSnapshot: snapshot as unknown as Prisma.InputJsonValue,
+            },
+          });
         });
         return {
           id: created.id,

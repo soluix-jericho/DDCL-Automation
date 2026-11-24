@@ -4,6 +4,9 @@ import { createTestPrisma, truncateAll } from '../helpers/db';
 
 let prisma: PrismaClient;
 
+// U2 (BR2.8): every item carries a snapshot of its step.
+const SNAPSHOT = { name: 'S', category: 'C', kind: 'forward', columns: [], attachments: [] };
+
 beforeAll(() => {
   prisma = createTestPrisma();
 });
@@ -47,11 +50,11 @@ describe('data model (database behaviour)', () => {
     const step = await prisma.step.create({ data: { name: 'S', category: 'C' } });
     const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
     const item = await prisma.checklistItem.create({
-      data: { ddclId: d.id, stepId: step.id, parameterValues: { image: 'app:1.0' } },
+      data: { ddclId: d.id, stepId: step.id, stepSnapshot: SNAPSHOT, parameterValues: { image: 'app:1.0' } },
       include: { step: true, ddcl: true },
     });
     expect(item.order).toBe(1);
-    expect(item.step.name).toBe('S');
+    expect(item.step?.name).toBe('S');
     expect(item.ddcl.id).toBe(d.id);
     expect(item.parameterValues).toEqual({ image: 'app:1.0' });
   });
@@ -59,14 +62,18 @@ describe('data model (database behaviour)', () => {
   it('allows ChecklistItem.parameterValues to be null', async () => {
     const step = await prisma.step.create({ data: { name: 'S', category: 'C' } });
     const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
-    const item = await prisma.checklistItem.create({ data: { ddclId: d.id, stepId: step.id } });
+    const item = await prisma.checklistItem.create({
+      data: { ddclId: d.id, stepId: step.id, stepSnapshot: SNAPSHOT },
+    });
     expect(item.parameterValues).toBeNull();
   });
 
   it('rejects a ChecklistItem that references a missing Step', async () => {
     const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
     await expect(
-      prisma.checklistItem.create({ data: { ddclId: d.id, stepId: 'does-not-exist' } }),
+      prisma.checklistItem.create({
+        data: { ddclId: d.id, stepId: 'does-not-exist', stepSnapshot: SNAPSHOT },
+      }),
     ).rejects.toThrow();
   });
 });

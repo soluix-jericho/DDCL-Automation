@@ -15,10 +15,12 @@ function json(status: number, body: unknown, headers: Record<string, string> = {
 
 /** Routes fetch calls by "METHOD path"; unknown routes fail the test loudly. */
 function mockFetch(routes: Record<string, Handler>) {
+  // U2: the Library screen also loads bundles; every test gets an empty list unless it says otherwise.
+  const all: Record<string, Handler> = { 'GET /api/v1/bundles': () => json(200, []), ...routes };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     const key = `${init?.method ?? 'GET'} ${url.pathname}`;
-    const handler = routes[key];
+    const handler = all[key];
     if (!handler) throw new Error(`Unexpected request: ${key}`);
     return handler(init);
   });
@@ -26,7 +28,22 @@ function mockFetch(routes: Record<string, Handler>) {
   return fn;
 }
 
-const STEP = { id: 's1', name: 'Update Image', category: 'Image', kind: 'forward', pairedRollbackStepId: null };
+const STEP = {
+  id: 's1',
+  name: 'Update Image',
+  category: 'Database',
+  kind: 'forward',
+  pairedRollbackStepId: null,
+  columnCount: 1,
+  attachmentCount: 0,
+  usageCount: 0,
+  missingRollback: true,
+};
+
+/** U2: the Library form opens from "Buat Step Baru" instead of being always visible. */
+async function openNewStepForm() {
+  await userEvent.click(await screen.findByTestId('step-new'));
+}
 const DDCL = { id: 'd1', title: 'T', status: 'Draft', createdBy: 'dev-user', tabLabel: '2026-10-26' };
 
 beforeEach(() => {
@@ -41,6 +58,7 @@ describe('Library screen', () => {
         json(400, { error: 'validation_error', message: 'x', fields: ['name', 'category'] }),
     });
     render(<App />);
+    await openNewStepForm();
     await userEvent.click(screen.getByTestId('step-submit'));
     expect(await screen.findByTestId('error-name')).toBeInTheDocument();
     expect(screen.getByTestId('error-category')).toBeInTheDocument();
@@ -53,6 +71,7 @@ describe('Library screen', () => {
         json(400, { error: 'validation_error', message: 'x', fields: ['category'] }),
     });
     render(<App />);
+    await openNewStepForm();
     await userEvent.type(screen.getByTestId('step-name-input'), 'Update Image');
     await userEvent.click(screen.getByTestId('step-submit'));
     expect(await screen.findByTestId('error-category')).toBeInTheDocument();
@@ -60,28 +79,40 @@ describe('Library screen', () => {
   });
 
   it('adds a created step to the list and sends credentials (session cookie)', async () => {
+    let created = false;
     const fetchMock = mockFetch({
-      'GET /api/v1/steps': () => json(200, []),
-      'POST /api/v1/steps': () => json(201, STEP),
+      'GET /api/v1/steps': () => json(200, created ? [STEP] : []),
+      'POST /api/v1/steps': () => {
+        created = true;
+        return json(201, STEP);
+      },
     });
     render(<App />);
+    await openNewStepForm();
     await userEvent.type(screen.getByTestId('step-name-input'), 'Update Image');
-    await userEvent.type(screen.getByTestId('step-category-input'), 'Image');
+    await userEvent.selectOptions(screen.getByTestId('step-category-input'), 'Database');
+    await userEvent.type(screen.getByTestId('main-line-0-0'), 'kubectl apply');
     await userEvent.click(screen.getByTestId('step-submit'));
     expect(await screen.findByTestId('step-item')).toHaveTextContent('Update Image');
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(post?.[1]).toMatchObject({ credentials: 'include' });
-    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ name: 'Update Image', category: 'Image' });
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+      name: 'Update Image',
+      category: 'Database',
+      kind: 'forward',
+      pairedRollbackStepId: null,
+    });
   });
 
   it('shows a generic message on a 500 and does not retry the POST', async () => {
     const post = vi.fn(() => json(500, { error: 'internal_error', message: 'db host 10.0.0.1 down' }));
     mockFetch({ 'GET /api/v1/steps': () => json(200, []), 'POST /api/v1/steps': post });
     render(<App />);
+    await openNewStepForm();
     await userEvent.type(screen.getByTestId('step-name-input'), 'A');
-    await userEvent.type(screen.getByTestId('step-category-input'), 'B');
+    await userEvent.selectOptions(screen.getByTestId('step-category-input'), 'Database');
     await userEvent.click(screen.getByTestId('step-submit'));
-    expect(await screen.findByTestId('library-error')).toHaveTextContent(GENERIC_ERROR);
+    expect(await screen.findByTestId('form-error')).toHaveTextContent(GENERIC_ERROR);
     expect(screen.queryByText(/10\.0\.0\.1/)).not.toBeInTheDocument();
     expect(post).toHaveBeenCalledTimes(1);
   });
@@ -94,8 +125,9 @@ describe('Library screen', () => {
       },
     });
     render(<App />);
+    await openNewStepForm();
     await userEvent.click(screen.getByTestId('step-submit'));
-    expect(await screen.findByTestId('library-error')).toHaveTextContent(GENERIC_ERROR);
+    expect(await screen.findByTestId('form-error')).toHaveTextContent(GENERIC_ERROR);
   });
 });
 

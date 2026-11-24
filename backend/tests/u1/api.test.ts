@@ -55,8 +55,16 @@ afterEach(async () => {
   await app.close();
 });
 
-async function createStep(name = 'Update Image', category = 'Image') {
-  const res = await app.inject({ method: 'POST', url: '/api/v1/steps', payload: { name, category } });
+// U2: a step body carries kind and at least one non-empty line (BR2.1).
+const stepPayload = (name: string, category: string) => ({
+  name,
+  category,
+  kind: 'forward',
+  columns: [{ lines: ['langkah'] }],
+});
+
+async function createStep(name = 'Update Image', category = 'Database') {
+  const res = await app.inject({ method: 'POST', url: '/api/v1/steps', payload: stepPayload(name, category) });
   return res.json() as { id: string };
 }
 
@@ -65,7 +73,7 @@ describe('steps API', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/steps',
-      payload: { name: 'Update Image', category: 'Image' },
+      payload: stepPayload('Update Image', 'Database'),
     });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({ name: 'Update Image', kind: 'forward' });
@@ -77,7 +85,7 @@ describe('steps API', () => {
   it('returns 400 naming the empty fields and stores nothing (BR1.1)', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/v1/steps', payload: { name: '' } });
     expect(res.statusCode).toBe(400);
-    expect(res.json().fields).toEqual(['name', 'category']);
+    expect(res.json().fields).toEqual(['name', 'category', 'columns', 'kind']);
     expect(await prisma.step.count()).toBe(0);
   });
 
@@ -197,7 +205,7 @@ describe('error handling when the database is unreachable (BR1.5, NFR3.2)', () =
       const res = await badApp.inject({
         method: 'POST',
         url: '/api/v1/steps',
-        payload: { name: 'X', category: 'Y' },
+        payload: stepPayload('X', 'Database'),
       });
       expect(res.statusCode).toBe(500);
       expect(res.json()).toEqual({ error: 'internal_error', message: GENERIC_ERROR_MESSAGE });
