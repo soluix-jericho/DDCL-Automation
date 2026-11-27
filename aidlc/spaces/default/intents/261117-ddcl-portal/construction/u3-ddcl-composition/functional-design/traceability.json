@@ -1,0 +1,197 @@
+{
+  "stage": "functional-design",
+  "unit": "u3-ddcl-composition",
+  "upstream_ids": [
+    "AC2.1.1",
+    "AC2.1.2",
+    "AC2.2.1",
+    "AC2.2.2",
+    "AC2.2.3",
+    "AC2.3.1",
+    "AC2.4.1",
+    "AC3.1.1",
+    "AC3.2.1",
+    "AC3.2.2",
+    "AC6.1.1",
+    "AC6.1.2"
+  ],
+  "coverage": [
+    {
+      "id": "AC2.1.1",
+      "status": "OK",
+      "target": "BR3.1, BR3.9 (DDCL tersimpan sebagai Draft dengan header; judul tab Deployment Checklist mengikuti tanggal diturunkan saat ekspor oleh U6)"
+    },
+    {
+      "id": "AC2.1.2",
+      "status": "OK",
+      "target": "BR3.1"
+    },
+    {
+      "id": "AC2.2.1",
+      "status": "OK",
+      "target": "BR3.2, BR3.4, BR3.6 (deviasi dari AC: isian mengikuti variabel di teks langkah, bukan field per kategori; keputusan U2 Q10)"
+    },
+    {
+      "id": "AC2.2.2",
+      "status": "OK",
+      "target": "BR3.3"
+    },
+    {
+      "id": "AC2.2.3",
+      "status": "OK",
+      "target": "BR3.2, BR3.5"
+    },
+    {
+      "id": "AC2.3.1",
+      "status": "OK",
+      "target": "BR3.2, BR3.6, BR3.12"
+    },
+    {
+      "id": "AC2.4.1",
+      "status": "Deferred",
+      "target": "ditunda oleh keputusan manusia (Q6, Q12): v1 hanya menampilkan tabel kosong berkolom template, tanpa penyimpanan catatan per step (BR3.13); mencatat isi per step belum dikerjakan di Unit mana pun"
+    },
+    {
+      "id": "AC3.1.1",
+      "status": "OK",
+      "target": "BR3.7, BR3.8, BR3.11 (diperluas: status Tereksekusi dan Di-rollback, keputusan Q10 dan Q13)"
+    },
+    {
+      "id": "AC3.2.1",
+      "status": "OK",
+      "target": "BR3.14, BR3.15"
+    },
+    {
+      "id": "AC3.2.2",
+      "status": "OK",
+      "target": "BR3.14"
+    },
+    {
+      "id": "AC6.1.1",
+      "status": "OK",
+      "target": "BR3.9, BR3.10"
+    },
+    {
+      "id": "AC6.1.2",
+      "status": "OK",
+      "target": "BR3.9"
+    }
+  ],
+  "reverse": [
+    {
+      "id": "BR3.1",
+      "status": "N/A",
+      "target": "validasi header (FR1, AC2.1.2)"
+    },
+    {
+      "id": "BR3.2",
+      "status": "N/A",
+      "target": "tambah step dan rollback pasangan (FR4.1)"
+    },
+    {
+      "id": "BR3.3",
+      "status": "N/A",
+      "target": "urutan baris (FR3.1)"
+    },
+    {
+      "id": "BR3.4",
+      "status": "N/A",
+      "target": "nilai isian per baris (FR3.3)"
+    },
+    {
+      "id": "BR3.5",
+      "status": "N/A",
+      "target": "duplikasi baris (FR3.2)"
+    },
+    {
+      "id": "BR3.6",
+      "status": "N/A",
+      "target": "pasang bundle dan penanda rollback (FR4, U2 BR2.14)"
+    },
+    {
+      "id": "BR3.7",
+      "status": "N/A",
+      "target": "tanggal status (Q7, Q10)"
+    },
+    {
+      "id": "BR3.8",
+      "status": "N/A",
+      "target": "siklus status (FR6, Q10, Q13)"
+    },
+    {
+      "id": "BR3.9",
+      "status": "N/A",
+      "target": "lock dan batas 15 menit (FR10, FR10.1, Q1)"
+    },
+    {
+      "id": "BR3.10",
+      "status": "N/A",
+      "target": "syarat tulis: Draft dan lock (FR10)"
+    },
+    {
+      "id": "BR3.11",
+      "status": "N/A",
+      "target": "read-only setelah dikirim (FR6.1)"
+    },
+    {
+      "id": "BR3.12",
+      "status": "N/A",
+      "target": "baris rollback diatur sendiri (Q3, Q4)"
+    },
+    {
+      "id": "BR3.13",
+      "status": "N/A",
+      "target": "Checklist Capture tabel kosong (FR5, Q6, Q12)"
+    },
+    {
+      "id": "BR3.14",
+      "status": "N/A",
+      "target": "versi baru vN (FR6.2, Q8, Q11)"
+    },
+    {
+      "id": "BR3.15",
+      "status": "N/A",
+      "target": "bentuk daftar per DDCL asli (Q2)"
+    },
+    {
+      "id": "BR3.16",
+      "status": "N/A",
+      "target": "hapus DDCL Draft oleh admin (Q9)"
+    },
+    {
+      "id": "BR3.17",
+      "status": "N/A",
+      "target": "peta role rute U3 (U4)"
+    },
+    {
+      "id": "BR3.18",
+      "status": "N/A",
+      "target": "migrasi data DdclDocument lama (familyId, versionNumber, sentAt)"
+    },
+    {
+      "id": "BR1.2",
+      "status": "N/A",
+      "target": "aturan U1 (DDCL baru berstatus Draft), dirujuk dan diperluas oleh BR3.8"
+    },
+    {
+      "id": "BR2.4",
+      "status": "N/A",
+      "target": "aturan U2 (variabel di teks langkah), dirujuk oleh BR3.2 dan BR3.4"
+    },
+    {
+      "id": "BR2.8",
+      "status": "N/A",
+      "target": "aturan U2 (snapshot per item), dirujuk oleh BR3.2, BR3.6, BR3.14"
+    },
+    {
+      "id": "BR2.14",
+      "status": "N/A",
+      "target": "aturan U2 (bundle dibaca untuk dipasang), dirujuk oleh BR3.6"
+    },
+    {
+      "id": "BR4.9",
+      "status": "N/A",
+      "target": "aturan U4 (peta role rute), dirujuk oleh BR3.17"
+    }
+  ]
+}
