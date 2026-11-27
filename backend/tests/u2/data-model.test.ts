@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestPrisma, truncateAll } from '../helpers/db';
+import { makeUser } from '../u4/helpers';
 
 let prisma: PrismaClient;
 
@@ -21,7 +22,7 @@ async function makeStep(name = 'Step A', category = 'Database', kind: 'forward' 
 }
 
 async function makeDdcl() {
-  return prisma.ddclDocument.create({ data: { title: 'D', createdBy: 'dev-user' } });
+  return prisma.ddclDocument.create({ data: { title: 'D', createdByUserId: (await makeUser(prisma)).id } });
 }
 
 describe('Step columns, lines and attachments', () => {

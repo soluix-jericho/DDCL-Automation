@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ConflictError, NotFoundError, ValidationError } from '../../src/errors';
 import { createRepository, Repository } from '../../src/repository';
 import { createTestPrisma, truncateAll } from '../helpers/db';
+import { makeUser } from '../u4/helpers';
 import { seedDdclWithItem, seedRollback, seedStep, stepBody } from './helpers';
 
 let prisma: PrismaClient;
@@ -17,6 +18,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await truncateAll(prisma);
+  await makeUser(prisma); // U4: every DDCL needs a creator account
 });
 
 describe('createStep (BR2.1, BR2.2, BR2.4, BR2.5)', () => {

@@ -1,14 +1,13 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
+import type { AuthApp } from '../u4/helpers';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SESSION_COOKIE } from '../../src/app';
 import { RetryExhausted, ServiceBusyError } from '../../src/errors';
 import { createRepository } from '../../src/repository';
 import { createTestPrisma, truncateAll } from '../helpers/db';
 import { makeApp, seedDdclWithItem, seedStep, stepJson } from './helpers';
 
 let prisma: PrismaClient;
-let app: FastifyInstance;
+let app: AuthApp;
 
 beforeAll(() => {
   prisma = createTestPrisma();
@@ -97,9 +96,10 @@ describe('POST /api/v1/steps', () => {
     expect((await post([1, 2])).statusCode).toBe(400);
   });
 
-  it('keeps the stub session cookie behaviour on Library routes (NFR2.6)', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/steps' });
-    expect(String(res.headers['set-cookie'])).toContain(`${SESSION_COOKIE}=`);
+  it('answers 401 on Library routes without a session (U4 replaces the stub of NFR2.6)', async () => {
+    const res = await app.rawInject({ method: 'GET', url: '/api/v1/steps' });
+    expect(res.statusCode).toBe(401);
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 });
 

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { makeUser } from '../u4/helpers';
 import { createTestPrisma, truncateAll } from '../helpers/db';
 
 let prisma: PrismaClient;
@@ -26,13 +27,13 @@ describe('data model (database behaviour)', () => {
   });
 
   it('defaults DdclDocument.status to Draft and sets createdAt', async () => {
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL 1', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL 1', createdByUserId: (await makeUser(prisma)).id } });
     expect(d.status).toBe('Draft');
     expect(d.createdAt).toBeInstanceOf(Date);
   });
 
   it('allows ReleaseHeader with only the DDCL id (all other columns nullable)', async () => {
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdByUserId: (await makeUser(prisma)).id } });
     const h = await prisma.releaseHeader.create({ data: { ddclId: d.id } });
     expect(h.date).toBeNull();
     expect(h.startDate).toBeNull();
@@ -41,14 +42,14 @@ describe('data model (database behaviour)', () => {
   });
 
   it('enforces ReleaseHeader 1:1 with DdclDocument', async () => {
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdByUserId: (await makeUser(prisma)).id } });
     await prisma.releaseHeader.create({ data: { ddclId: d.id } });
     await expect(prisma.releaseHeader.create({ data: { ddclId: d.id } })).rejects.toThrow();
   });
 
   it('links ChecklistItem to Step and DdclDocument with order defaulting to 1', async () => {
     const step = await prisma.step.create({ data: { name: 'S', category: 'C' } });
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdByUserId: (await makeUser(prisma)).id } });
     const item = await prisma.checklistItem.create({
       data: { ddclId: d.id, stepId: step.id, stepSnapshot: SNAPSHOT, parameterValues: { image: 'app:1.0' } },
       include: { step: true, ddcl: true },
@@ -61,7 +62,7 @@ describe('data model (database behaviour)', () => {
 
   it('allows ChecklistItem.parameterValues to be null', async () => {
     const step = await prisma.step.create({ data: { name: 'S', category: 'C' } });
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdByUserId: (await makeUser(prisma)).id } });
     const item = await prisma.checklistItem.create({
       data: { ddclId: d.id, stepId: step.id, stepSnapshot: SNAPSHOT },
     });
@@ -69,7 +70,7 @@ describe('data model (database behaviour)', () => {
   });
 
   it('rejects a ChecklistItem that references a missing Step', async () => {
-    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'DDCL', createdByUserId: (await makeUser(prisma)).id } });
     await expect(
       prisma.checklistItem.create({
         data: { ddclId: d.id, stepId: 'does-not-exist', stepSnapshot: SNAPSHOT },

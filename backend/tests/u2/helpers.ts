@@ -1,24 +1,22 @@
 import type { PrismaClient } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
-import { buildApp, BuildAppOptions } from '../../src/app';
+import type { BuildAppOptions } from '../../src/app';
 import { createRepository } from '../../src/repository';
 import type { Repository } from '../../src/repository';
+import { authApp, AuthApp, cheapPasswords, ORIGIN as U4_ORIGIN } from '../u4/helpers';
 import type { BundleInput, StepInput } from '../../src/stepRules';
 
-export const ORIGIN = 'http://localhost:5173';
+export const ORIGIN = U4_ORIGIN;
 
-/** An app over the given database; the template path is irrelevant to Library tests. */
+/**
+ * An app over the given database (U4: every route needs a session). `app.inject` is signed in as an admin by
+ * default, so the U2 assertions stay as they were; `app.as(role)` and `app.rawInject` serve the role tests.
+ */
 export function makeApp(
   prisma: PrismaClient,
   extra: Partial<BuildAppOptions> = {},
-  repo: Repository = createRepository(prisma),
-): Promise<FastifyInstance> {
-  return buildApp({
-    repo,
-    config: { port: 0, frontendOrigin: ORIGIN, templatePath: '/nonexistent.xlsx' },
-    logger: false,
-    ...extra,
-  });
+  repo: Repository = createRepository(prisma, { passwords: cheapPasswords }),
+): Promise<AuthApp> {
+  return authApp(prisma, extra, repo);
 }
 
 /** A step body as an HTTP client sends it (JSON). */
@@ -60,7 +58,10 @@ export async function seedRollback(repo: Repository, name = 'Undo', over: Partia
 
 /** A DDCL with one checklist item (its own snapshot) for the given step. */
 export async function seedDdclWithItem(repo: Repository, stepId: string, title = 'DDCL') {
-  const ddcl = await repo.createDdcl({ title, releaseHeader: {} });
+  // The creator is any existing account (authApp creates three); U4 requires one for every DDCL.
+  const [creator] = await repo.listUsers();
+  if (!creator) throw new Error('seedDdclWithItem needs an account: build the app with makeApp first');
+  const ddcl = await repo.createDdcl({ title, releaseHeader: {} }, creator.id);
   const item = await repo.addChecklistItem(ddcl.id, { stepId, parameterValues: null });
   return { ddcl, item };
 }

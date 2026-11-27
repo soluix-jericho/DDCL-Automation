@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../../src/errors';
 import {
-  DEFAULT_CREATED_BY,
   INITIAL_STATUS,
   MAX_PARAMETERS,
   tabLabel,
@@ -54,9 +53,8 @@ describe('step validation (BR1.1, extended by BR2.1)', () => {
   });
 });
 
-describe('constants and labels (BR1.2, BR1.3, BR1.7)', () => {
-  it('uses fixed createdBy and Draft status', () => {
-    expect(DEFAULT_CREATED_BY).toBe('dev-user');
+describe('constants and labels (BR1.2, BR1.7)', () => {
+  it('starts every DDCL as Draft', () => {
     expect(INITIAL_STATUS).toBe('Draft');
   });
 

@@ -25,7 +25,18 @@ services:
       BACKEND_PORT: ${BACKEND_PORT:-3000}
       DATABASE_URL: ${DATABASE_URL}
       TEST_DATABASE_URL: ${TEST_DATABASE_URL:-}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      # Allowed browser origins (CORS and the Origin check on writes). No default: an empty value stops the backend
+      # at start, so an old setting is never silently replaced. FRONTEND_ORIGIN is still read when ALLOWED_ORIGINS is empty.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-}
+      # First admin, used only while the User table is empty. No default for the password.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      # scrypt runs in the libuv pool: 8 threads keep two hashes plus database work from queueing behind each other.
+      UV_THREADPOOL_SIZE: 8
       DDCL_TEMPLATE_PATH: ${DDCL_TEMPLATE_PATH:-/app/template/DDCL BCAS PROD 202611 - TEMPLATE.xlsx}
       # libpq settings for scripts/start-prod.sh (psql, pg_dump). Not DATABASE_URL: it carries Prisma-only options.
       PGHOST: db
@@ -33,6 +44,12 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
       BACKUP_KEEP: ${BACKUP_KEEP:-10}
+    # Rotation for the JSON logs, which now include login and audit events (docker compose logs).
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
     ports:
       - '${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}'
     volumes:

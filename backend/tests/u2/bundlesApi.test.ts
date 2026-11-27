@@ -1,12 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
+import type { AuthApp } from '../u4/helpers';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '../../src/repository';
 import { createTestPrisma, truncateAll } from '../helpers/db';
 import { makeApp, seedRollback, seedStep } from './helpers';
 
 let prisma: PrismaClient;
-let app: FastifyInstance;
+let app: AuthApp;
 let ids: { f1: string; f2: string; f3: string; r1: string; r2: string };
 
 beforeAll(() => {

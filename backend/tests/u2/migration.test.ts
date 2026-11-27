@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestPrisma, truncateAll } from '../helpers/db';
+import { makeUser } from '../u4/helpers';
 
 let prisma: PrismaClient;
 
@@ -66,7 +67,7 @@ describe('migration 20261124000000_u2_step_library: indexes (NFR4.7)', () => {
 describe('migration 20261124000000_u2_step_library: data steps on populated tables', () => {
   it('backfills stepSnapshot from Step for items created before U2', async () => {
     const step = await makeStep('Update Image', 'Image');
-    const d = await prisma.ddclDocument.create({ data: { title: 'D', createdBy: 'dev-user' } });
+    const d = await prisma.ddclDocument.create({ data: { title: 'D', createdByUserId: (await makeUser(prisma)).id } });
     // A U1-era item: placeholder snapshot, then the migration's UPDATE statement.
     await prisma.$executeRawUnsafe(
       `INSERT INTO "ChecklistItem" ("id","ddclId","stepId","order","stepSnapshot") VALUES ('old1','${d.id}','${step.id}',1,'{}'::jsonb)`,

@@ -1,18 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { buildApp, GENERIC_ERROR_MESSAGE, SESSION_COOKIE, XLSX_MIME } from '../../src/app';
+import { buildApp, GENERIC_ERROR_MESSAGE, XLSX_MIME } from '../../src/app';
 import type { AppConfig } from '../../src/config';
 import { createRepository } from '../../src/repository';
+import { authApp, AuthApp, cheapPasswords, ORIGIN, testConfig } from '../u4/helpers';
 import { createTestPrisma, createUnreachablePrisma, truncateAll } from '../helpers/db';
 import { buildFixtureTemplate, cleanTmp, readBack, TMP_DIR } from '../helpers/template';
 
-const ORIGIN = 'http://localhost:5173';
-
 let prisma: PrismaClient;
 let templatePath: string;
-let app: FastifyInstance;
+let app: AuthApp;
 const logged: Array<{ level: string; obj: unknown; msg?: string }> = [];
 
 /** Minimal logger that records entries, so tests can assert on error-boundary fields (OBS1.2). */
@@ -35,7 +33,7 @@ function collectingLogger() {
 }
 
 function config(over: Partial<AppConfig> = {}): AppConfig {
-  return { port: 0, frontendOrigin: ORIGIN, templatePath, ...over };
+  return testConfig({ templatePath, ...over });
 }
 
 beforeAll(async () => {
@@ -49,7 +47,12 @@ afterAll(async () => {
 beforeEach(async () => {
   logged.length = 0;
   await truncateAll(prisma);
-  app = await buildApp({ repo: createRepository(prisma), config: config(), logger: collectingLogger() });
+  app = await authApp(
+    prisma,
+    { logger: collectingLogger() },
+    createRepository(prisma, { passwords: cheapPasswords }),
+    config(),
+  );
 });
 afterEach(async () => {
   await app.close();
@@ -101,7 +104,7 @@ describe('steps API', () => {
 });
 
 describe('DDCL API', () => {
-  it('creates a Draft DDCL created by dev-user with header and tabLabel (BR1.2, BR1.3, BR1.7)', async () => {
+  it('creates a Draft DDCL created by the signed-in account with header and tabLabel (BR1.2, BR4.16, BR1.7)', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/ddcls',
@@ -109,7 +112,7 @@ describe('DDCL API', () => {
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body).toMatchObject({ status: 'Draft', createdBy: 'dev-user', tabLabel: '2026-10-26' });
+    expect(body).toMatchObject({ status: 'Draft', createdBy: 'admin', createdByUserId: app.users.admin.id, tabLabel: '2026-10-26' });
     expect(body.releaseHeader.environment).toBe('PROD');
   });
 
@@ -177,13 +180,17 @@ describe('export API', () => {
   it('fails with a clear message naming the expected path when the template is missing (BR1.4)', async () => {
     const missing = path.join(TMP_DIR, 'absent.xlsx');
     const other = await buildApp({
-      repo: createRepository(prisma),
+      repo: createRepository(prisma, { passwords: cheapPasswords }),
       config: config({ templatePath: missing }),
       logger: collectingLogger(),
     });
     try {
       const id = await ddclWithItem();
-      const res = await other.inject({ method: 'GET', url: `/api/v1/ddcls/${id}/export` });
+      const res = await other.inject({
+        method: 'GET',
+        url: `/api/v1/ddcls/${id}/export`,
+        headers: app.as('admin'),
+      });
       expect(res.statusCode).toBe(500);
       expect(res.json().message).toContain(missing);
       expect(res.headers['content-type']).not.toBe(XLSX_MIME);
@@ -194,10 +201,11 @@ describe('export API', () => {
 });
 
 describe('error handling when the database is unreachable (BR1.5, NFR3.2)', () => {
+  // U4 (NFR3.20): the session lookup is the first database call, so an unreachable database fails closed there.
   it('returns a generic 500 without infrastructure details and logs operation + err', async () => {
     const bad = createUnreachablePrisma();
     const badApp = await buildApp({
-      repo: createRepository(bad),
+      repo: createRepository(bad, { passwords: cheapPasswords }),
       config: config(),
       logger: collectingLogger(),
     });
@@ -205,13 +213,14 @@ describe('error handling when the database is unreachable (BR1.5, NFR3.2)', () =
       const res = await badApp.inject({
         method: 'POST',
         url: '/api/v1/steps',
+        headers: app.as('editor'),
         payload: stepPayload('X', 'Database'),
       });
       expect(res.statusCode).toBe(500);
       expect(res.json()).toEqual({ error: 'internal_error', message: GENERIC_ERROR_MESSAGE });
       expect(res.body).not.toMatch(/127\.0\.0\.1|nobody|postgres|prisma/i);
       const entry = logged.find((l) => l.level === 'error');
-      expect(entry?.obj).toMatchObject({ operation: 'createStep', method: 'POST' });
+      expect(entry?.obj).toMatchObject({ operation: 'findSession', method: 'POST' });
       expect((entry?.obj as { err: unknown }).err).toBeDefined();
     } finally {
       await badApp.close();
@@ -229,7 +238,7 @@ describe('health endpoint', () => {
 
   it('reports 503 unhealthy when the database is unreachable', async () => {
     const bad = createUnreachablePrisma();
-    const badApp = await buildApp({ repo: createRepository(bad), config: config(), logger: false });
+    const badApp = await buildApp({ repo: createRepository(bad, { passwords: cheapPasswords }), config: config(), logger: false });
     try {
       const res = await badApp.inject({ method: 'GET', url: '/health' });
       expect(res.statusCode).toBe(503);
@@ -241,22 +250,10 @@ describe('health endpoint', () => {
   });
 });
 
-describe('session cookie stub and CORS (NFR2.1, NFR2.2)', () => {
-  it('sets an HTTP-only session cookie when none is sent and never rejects', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/steps' });
-    expect(res.statusCode).toBe(200);
-    const setCookie = String(res.headers['set-cookie']);
-    expect(setCookie).toContain(`${SESSION_COOKIE}=`);
-    expect(setCookie).toMatch(/HttpOnly/i);
-  });
-
-  it('does not reset the cookie when one is already present', async () => {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/v1/steps',
-      headers: { cookie: `${SESSION_COOKIE}=dev-session` },
-    });
-    expect(res.statusCode).toBe(200);
+describe('CORS and the removed stub session (NFR2.2, BR4.8)', () => {
+  it('no longer sets a cookie by itself and refuses a request without a session', async () => {
+    const res = await app.rawInject({ method: 'GET', url: '/api/v1/steps' });
+    expect(res.statusCode).toBe(401);
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 

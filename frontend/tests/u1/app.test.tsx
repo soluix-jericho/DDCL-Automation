@@ -16,7 +16,13 @@ function json(status: number, body: unknown, headers: Record<string, string> = {
 /** Routes fetch calls by "METHOD path"; unknown routes fail the test loudly. */
 function mockFetch(routes: Record<string, Handler>) {
   // U2: the Library screen also loads bundles; every test gets an empty list unless it says otherwise.
-  const all: Record<string, Handler> = { 'GET /api/v1/bundles': () => json(200, []), ...routes };
+  // U4: the app asks who is signed in first (admin, so every U1 screen is available).
+  const all: Record<string, Handler> = {
+    'GET /api/v1/bundles': () => json(200, []),
+    'GET /api/v1/auth/me': () =>
+      json(200, { id: 'u1', name: 'Admin Uji', email: 'admin@example.test', role: 'admin' }),
+    ...routes,
+  };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     const key = `${init?.method ?? 'GET'} ${url.pathname}`;
@@ -135,7 +141,7 @@ describe('Compose screen', () => {
   it('tab label follows the header date (BR1.7)', async () => {
     mockFetch({ 'GET /api/v1/steps': () => json(200, [STEP]) });
     render(<App />);
-    await userEvent.click(screen.getByTestId('tab-compose'));
+    await userEvent.click(await screen.findByTestId('tab-compose'));
     expect(screen.getByTestId('tab-label')).toHaveTextContent('DDCL baru');
     fireEvent.change(screen.getByTestId('header-date-input'), { target: { value: '2026-10-26' } });
     expect(screen.getByTestId('tab-label')).toHaveTextContent('2026-10-26');
@@ -152,7 +158,7 @@ describe('Compose screen', () => {
     });
     render(<App />);
     await screen.findByTestId('step-item');
-    await userEvent.click(screen.getByTestId('tab-compose'));
+    await userEvent.click(await screen.findByTestId('tab-compose'));
     await userEvent.type(screen.getByTestId('ddcl-title-input'), 'T');
     fireEvent.change(screen.getByTestId('header-date-input'), { target: { value: '2026-10-26' } });
     await userEvent.click(screen.getByTestId('ddcl-submit'));
@@ -183,7 +189,7 @@ describe('Compose screen', () => {
       'POST /api/v1/ddcls': () => json(201, DDCL),
     });
     render(<App />);
-    await userEvent.click(screen.getByTestId('tab-compose'));
+    await userEvent.click(await screen.findByTestId('tab-compose'));
     await userEvent.type(screen.getByTestId('ddcl-title-input'), 'T');
     await userEvent.click(screen.getByTestId('ddcl-submit'));
     expect(await screen.findByTestId('checklist-add')).toBeDisabled();
@@ -196,7 +202,7 @@ describe('Compose screen', () => {
         json(400, { error: 'validation_error', message: 'Field wajib belum diisi: title', fields: ['title'] }),
     });
     render(<App />);
-    await userEvent.click(screen.getByTestId('tab-compose'));
+    await userEvent.click(await screen.findByTestId('tab-compose'));
     await userEvent.click(screen.getByTestId('ddcl-submit'));
     expect(await screen.findByTestId('compose-error')).toHaveTextContent('title');
   });
@@ -213,20 +219,20 @@ describe('Export screen', () => {
     });
     render(<App />);
     await screen.findByTestId('step-item');
-    await userEvent.click(screen.getByTestId('tab-compose'));
+    await userEvent.click(await screen.findByTestId('tab-compose'));
     await userEvent.type(screen.getByTestId('ddcl-title-input'), 'T');
     await userEvent.click(screen.getByTestId('ddcl-submit'));
     await userEvent.selectOptions(await screen.findByTestId('checklist-step-select'), 's1');
     await userEvent.click(screen.getByTestId('checklist-add'));
     await screen.findByTestId('checklist-added');
-    await userEvent.click(screen.getByTestId('tab-export'));
+    await userEvent.click(await screen.findByTestId('tab-export'));
     return fetchMock;
   }
 
   it('asks the user to build a DDCL first when none exists', async () => {
     mockFetch({ 'GET /api/v1/steps': () => json(200, []) });
     render(<App />);
-    await userEvent.click(screen.getByTestId('tab-export'));
+    await userEvent.click(await screen.findByTestId('tab-export'));
     expect(screen.getByTestId('export-hint')).toBeInTheDocument();
     expect(screen.queryByTestId('export-download')).not.toBeInTheDocument();
   });

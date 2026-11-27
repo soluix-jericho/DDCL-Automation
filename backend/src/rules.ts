@@ -1,7 +1,5 @@
 import { ValidationError } from './errors';
 
-/** BR1.3: constant stub until UserAccount (U4) exists. */
-export const DEFAULT_CREATED_BY = 'dev-user';
 /** BR1.2: every new DDCL starts as Draft. */
 export const INITIAL_STATUS = 'Draft' as const;
 /** Skeleton limit: parameter rows the template's first object group can hold (sheet 3, rows 7-23). */

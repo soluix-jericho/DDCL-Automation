@@ -20,7 +20,8 @@ function ddcl(over: Partial<DdclRecord> = {}, params: Record<string, string> | n
     id: 'd1',
     title: 'DDCL',
     status: 'Draft',
-    createdBy: 'dev-user',
+    createdBy: 'Pembuat Uji',
+    createdByUserId: null,
     createdAt: '2026-11-23T00:00:00.000Z',
     releaseHeader: {
       date: '2026-10-26',

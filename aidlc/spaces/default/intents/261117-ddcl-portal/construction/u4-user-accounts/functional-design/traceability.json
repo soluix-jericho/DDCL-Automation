@@ -1,0 +1,25 @@
+{
+  "stage": "functional-design",
+  "unit": "u4-user-accounts",
+  "upstream_ids": [
+    "AC6.2.1"
+  ],
+  "coverage": [
+    { "id": "AC6.2.1", "status": "OK", "target": "BR4.1, BR4.3, BR4.5, BR4.8, BR4.9, BR4.10, BR4.11" }
+  ],
+  "reverse": [
+    { "id": "BR4.2", "status": "N/A", "target": "kebijakan kata sandi dari keputusan Q2 (turunan NFR2), pendukung AC6.2.1 tanpa ID penerimaan sendiri" },
+    { "id": "BR4.4", "status": "N/A", "target": "perlindungan tebak kata sandi dari keputusan Q4 (turunan NFR2)" },
+    { "id": "BR4.6", "status": "N/A", "target": "masa berlaku sesi dari keputusan Q3 (turunan NFR2)" },
+    { "id": "BR4.7", "status": "N/A", "target": "logout dari Contract 1 (POST /auth/logout)" },
+    { "id": "BR4.12", "status": "N/A", "target": "ganti kata sandi sendiri dari keputusan Q2" },
+    { "id": "BR4.13", "status": "N/A", "target": "nonaktifkan akun dari keputusan Q5 dan Q11" },
+    { "id": "BR4.14", "status": "N/A", "target": "ubah role dari keputusan Q1, Q9, Q11 (deviasi scope yang diputuskan manusia)" },
+    { "id": "BR4.15", "status": "N/A", "target": "perlindungan CSRF dari keputusan Q8 (turunan NFR2)" },
+    { "id": "BR4.16", "status": "N/A", "target": "pembuat DDCL dari keputusan Q6, dipakai U5" },
+    { "id": "BR4.17", "status": "N/A", "target": "pembatasan data akun dari NFR2 dan phases/construction.md ## Security" },
+    { "id": "BR4.18", "status": "N/A", "target": "pengaturan ulang kata sandi dan buka kunci oleh admin dari keputusan NFR Requirements Q3 (B) dan Q12, temuan review R-01" },
+    { "id": "BR4.19", "status": "N/A", "target": "kasus tepi PATCH akun dari temuan review R-06" },
+    { "id": "BR4.20", "status": "N/A", "target": "tabel audit dari keputusan Q13 dan NFR Requirements Q5 (B)" }
+  ]
+}

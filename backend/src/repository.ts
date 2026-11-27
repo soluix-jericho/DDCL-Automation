@@ -1,7 +1,12 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { isConnectionError, withDb } from './db';
 import { NotFoundError } from './errors';
-import { ChecklistInput, DdclInput, DEFAULT_CREATED_BY, INITIAL_STATUS } from './rules';
+import { ChecklistInput, DdclInput, INITIAL_STATUS } from './rules';
+import { createAccountRepository } from './accountRepository';
+import { createAuditRepository } from './auditRepository';
+import { createSessionRepository } from './sessionRepository';
+import { createHashGate } from './hashGate';
+import { createPasswordService, PasswordService } from './passwordService';
 import { createBundleRepository } from './bundleRepository';
 import { createStepRepository, RepoContext } from './stepRepository';
 import { buildStepSnapshot, StepSnapshot } from './stepSnapshot';
@@ -38,7 +43,9 @@ export interface DdclRecord {
   id: string;
   title: string;
   status: string;
+  /** Name of the creator, derived through the User join (not a column). */
   createdBy: string;
+  createdByUserId: string | null;
   createdAt: string;
   releaseHeader: HeaderRecord | null;
   checklistItems: ChecklistItemRecord[];
@@ -70,7 +77,7 @@ function stepFromSnapshot(snap: StepSnapshot): StepRecord {
 }
 
 type DdclWithRelations = Prisma.DdclDocumentGetPayload<{
-  include: { releaseHeader: true; checklistItems: true };
+  include: { releaseHeader: true; checklistItems: true; createdBy: { select: { name: true } } };
 }>;
 
 function toDdcl(d: DdclWithRelations): DdclRecord {
@@ -79,7 +86,8 @@ function toDdcl(d: DdclWithRelations): DdclRecord {
     id: d.id,
     title: d.title,
     status: statusOut(d.status),
-    createdBy: d.createdBy,
+    createdBy: d.createdBy?.name ?? '',
+    createdByUserId: d.createdByUserId,
     createdAt: d.createdAt.toISOString(),
     releaseHeader: h
       ? {
@@ -105,26 +113,37 @@ function toDdcl(d: DdclWithRelations): DdclRecord {
   };
 }
 
-export function createRepository(prisma: PrismaClient) {
+export interface RepositoryDeps {
+  /** Password hashing; defaults to scrypt N=32768 behind a 2-slot gate. Tests inject a cheaper one. */
+  passwords?: PasswordService;
+}
+
+export function createRepository(prisma: PrismaClient, deps: RepositoryDeps = {}) {
   const include = {
     releaseHeader: true,
     checklistItems: true,
+    createdBy: { select: { name: true } },
   } as const;
 
   // Warnings from Library transactions (deadlock retries) go to whatever logger the app attaches.
   let warnSink: RepoContext['warn'] = () => undefined;
+  const passwords = deps.passwords ?? createPasswordService(createHashGate());
   const ctx: RepoContext = { warn: (obj, msg) => warnSink(obj, msg) };
 
   return {
     ...createStepRepository(prisma, ctx),
     ...createBundleRepository(prisma, ctx),
+    ...createAccountRepository({ prisma, passwords, warn: (obj, msg) => warnSink(obj, msg) }),
+    ...createAuditRepository(prisma),
+    ...createSessionRepository(prisma),
+    passwords,
 
     setWarnSink(sink: RepoContext['warn']): void {
       warnSink = sink;
     },
 
-    /** Creates the document and its header in one transaction (nested create is atomic). */
-    createDdcl(input: DdclInput): Promise<DdclRecord> {
+    /** Creates the document and its header in one transaction; the creator always comes from the session (BR4.16). */
+    createDdcl(input: DdclInput, createdByUserId: string): Promise<DdclRecord> {
       const h = input.releaseHeader;
       return withDb('createDdcl', async () =>
         toDdcl(
@@ -132,7 +151,7 @@ export function createRepository(prisma: PrismaClient) {
             data: {
               title: input.title,
               status: INITIAL_STATUS,
-              createdBy: DEFAULT_CREATED_BY,
+              createdByUserId,
               releaseHeader: {
                 create: {
                   date: dateIn(h.date),

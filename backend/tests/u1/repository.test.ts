@@ -4,9 +4,11 @@ import { DatabaseUnavailable, NotFoundError } from '../../src/errors';
 import { createRepository } from '../../src/repository';
 import { createTestPrisma, createUnreachablePrisma, truncateAll } from '../helpers/db';
 import { stepBody } from '../u2/helpers';
+import { makeUser } from '../u4/helpers';
 
 let prisma: PrismaClient;
 let repo: ReturnType<typeof createRepository>;
+let creatorId: string;
 
 beforeAll(() => {
   prisma = createTestPrisma();
@@ -17,6 +19,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await truncateAll(prisma);
+  creatorId = (await makeUser(prisma, { name: 'Pembuat Uji' })).id;
 });
 
 describe('repository', () => {
@@ -27,13 +30,17 @@ describe('repository', () => {
     expect(list.map((s) => s.id)).toEqual([step.id]);
   });
 
-  it('creates a DDCL with header: Draft, dev-user, dates round-trip', async () => {
-    const d = await repo.createDdcl({
-      title: 'DDCL 26 Okt',
-      releaseHeader: { date: '2026-10-26', startDate: '2026-10-26', environment: 'PROD' },
-    });
+  it('creates a DDCL with header: Draft, creator from the account, dates round-trip', async () => {
+    const d = await repo.createDdcl(
+      {
+        title: 'DDCL 26 Okt',
+        releaseHeader: { date: '2026-10-26', startDate: '2026-10-26', environment: 'PROD' },
+      },
+      creatorId,
+    );
     expect(d.status).toBe('Draft');
-    expect(d.createdBy).toBe('dev-user');
+    expect(d.createdBy).toBe('Pembuat Uji');
+    expect(d.createdByUserId).toBe(creatorId);
     expect(d.releaseHeader?.date).toBe('2026-10-26');
     expect(d.releaseHeader?.environment).toBe('PROD');
     expect(d.releaseHeader?.impactedSystem).toBeNull();
@@ -41,7 +48,7 @@ describe('repository', () => {
 
   it('adds a checklist item with order 1 and reads it back for export', async () => {
     const step = await repo.createStep(stepBody({ name: 'Update Image', category: 'Database' }));
-    const d = await repo.createDdcl({ title: 'T', releaseHeader: {} });
+    const d = await repo.createDdcl({ title: 'T', releaseHeader: {} }, creatorId);
     const item = await repo.addChecklistItem(d.id, {
       stepId: step.id,
       parameterValues: { image: 'app:1.0' },
@@ -62,7 +69,7 @@ describe('repository', () => {
     await expect(
       repo.addChecklistItem('missing', { stepId: step.id, parameterValues: null }),
     ).rejects.toBeInstanceOf(NotFoundError);
-    const d = await repo.createDdcl({ title: 'T', releaseHeader: {} });
+    const d = await repo.createDdcl({ title: 'T', releaseHeader: {} }, creatorId);
     await expect(
       repo.addChecklistItem(d.id, { stepId: 'missing', parameterValues: null }),
     ).rejects.toBeInstanceOf(NotFoundError);
@@ -72,7 +79,7 @@ describe('repository', () => {
     // PostgreSQL rejects NUL bytes in text, so the nested header insert fails after the
     // document insert; the whole nested write must roll back.
     await expect(
-      repo.createDdcl({ title: 'Broken', releaseHeader: { environment: 'a\u0000b' } }),
+      repo.createDdcl({ title: 'Broken', releaseHeader: { environment: 'a\u0000b' } }, creatorId),
     ).rejects.toThrow();
     expect(await prisma.ddclDocument.count()).toBe(0);
     expect(await prisma.releaseHeader.count()).toBe(0);

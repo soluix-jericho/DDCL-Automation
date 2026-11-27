@@ -4,6 +4,7 @@ import { NotFoundError } from '../../src/errors';
 import { exportDdclToXlsx } from '../../src/excel';
 import { createRepository, Repository } from '../../src/repository';
 import { createTestPrisma, truncateAll } from '../helpers/db';
+import { makeUser } from '../u4/helpers';
 import { buildFixtureTemplate, cleanTmp, readBack } from '../helpers/template';
 import { seedDdclWithItem, seedRollback, seedStep, stepBody } from './helpers';
 
@@ -22,6 +23,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await truncateAll(prisma);
+  await makeUser(prisma); // U4: every DDCL needs a creator account
 });
 
 async function snapshotText(itemId: string): Promise<string> {
@@ -105,7 +107,7 @@ describe('stepSnapshot (BR2.8)', () => {
   });
 
   it('answers NotFoundError and creates no item when the step is gone (no half-written item)', async () => {
-    const ddcl = await repo.createDdcl({ title: 'T', releaseHeader: {} });
+    const ddcl = await repo.createDdcl({ title: 'T', releaseHeader: {} }, (await repo.listUsers())[0]!.id);
     await expect(repo.addChecklistItem(ddcl.id, { stepId: 'gone', parameterValues: null })).rejects.toBeInstanceOf(
       NotFoundError,
     );

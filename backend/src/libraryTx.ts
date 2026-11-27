@@ -22,7 +22,7 @@ const TX_OPTIONS = { timeout: 10_000, maxWait: 5_000 } as const;
 
 class LockSetChanged extends Error {}
 
-function isDeadlock(err: unknown): boolean {
+export function isDeadlock(err: unknown): boolean {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2034') return true;
     if (err.code === 'P2010' && (err.meta as { code?: string } | undefined)?.code === '40P01') return true;

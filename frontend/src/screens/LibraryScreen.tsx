@@ -19,6 +19,10 @@ import { StepForm } from './library/StepForm';
 interface Props {
   /** Called after any change so other screens (compose) can reload the step list. */
   onLibraryChanged: () => void;
+  /** Convenience only: the backend enforces the role (BR4.9). editor and admin write; default true. */
+  canWrite?: boolean;
+  /** Only admin deletes; default true. */
+  canDelete?: boolean;
 }
 
 type Mode =
@@ -27,7 +31,7 @@ type Mode =
   | { type: 'bundle'; bundle?: BundleDetail };
 
 /** Library: steps and bundles with server-side search and category filter (Alur 1-5). */
-export function LibraryScreen({ onLibraryChanged }: Props) {
+export function LibraryScreen({ onLibraryChanged, canWrite = true, canDelete = true }: Props) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('');
   const [steps, setSteps] = useState<StepListItem[]>([]);
@@ -166,28 +170,32 @@ export function LibraryScreen({ onLibraryChanged }: Props) {
             ))}
           </select>
         </div>
-        <button
-          type="button"
-          data-testid="step-new"
-          className="rounded bg-blue-700 px-3 py-1 text-white"
-          onClick={() => {
-            setNotice(null);
-            setMode({ type: 'step' });
-          }}
-        >
-          Buat Step Baru
-        </button>
-        <button
-          type="button"
-          data-testid="bundle-new"
-          className="rounded border border-blue-700 px-3 py-1 text-blue-700"
-          onClick={() => {
-            setNotice(null);
-            setMode({ type: 'bundle' });
-          }}
-        >
-          Buat Bundle
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            data-testid="step-new"
+            className="rounded bg-blue-700 px-3 py-1 text-white"
+            onClick={() => {
+              setNotice(null);
+              setMode({ type: 'step' });
+            }}
+          >
+            Buat Step Baru
+          </button>
+        )}
+        {canWrite && (
+          <button
+            type="button"
+            data-testid="bundle-new"
+            className="rounded border border-blue-700 px-3 py-1 text-blue-700"
+            onClick={() => {
+              setNotice(null);
+              setMode({ type: 'bundle' });
+            }}
+          >
+            Buat Bundle
+          </button>
+        )}
       </div>
 
       {notice && (
@@ -241,20 +249,24 @@ export function LibraryScreen({ onLibraryChanged }: Props) {
                 </span>
               )}
               <span className="ml-auto flex gap-2">
-                <button type="button" data-testid="step-edit" className="text-sm underline" onClick={() => openEditStep(s.id)}>
-                  Ubah
-                </button>
-                <button
-                  type="button"
-                  data-testid="step-delete"
-                  className="text-sm text-red-700 underline"
-                  onClick={() => {
-                    setNotice(null);
-                    setDeleting(s);
-                  }}
-                >
-                  Hapus
-                </button>
+                {canWrite && (
+                  <button type="button" data-testid="step-edit" className="text-sm underline" onClick={() => openEditStep(s.id)}>
+                    Ubah
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    data-testid="step-delete"
+                    className="text-sm text-red-700 underline"
+                    onClick={() => {
+                      setNotice(null);
+                      setDeleting(s);
+                    }}
+                  >
+                    Hapus
+                  </button>
+                )}
               </span>
             </li>
           ))}
@@ -277,12 +289,16 @@ export function LibraryScreen({ onLibraryChanged }: Props) {
                 {b.forwardCount} forward, {b.rollbackCount} rollback
               </span>
               <span className="ml-auto flex gap-2">
-                <button type="button" data-testid="bundle-edit" className="text-sm underline" onClick={() => openEditBundle(b.id)}>
-                  Ubah
-                </button>
-                <button type="button" data-testid="bundle-delete" className="text-sm text-red-700 underline" onClick={() => removeBundle(b)}>
-                  Hapus
-                </button>
+                {canWrite && (
+                  <button type="button" data-testid="bundle-edit" className="text-sm underline" onClick={() => openEditBundle(b.id)}>
+                    Ubah
+                  </button>
+                )}
+                {canDelete && (
+                  <button type="button" data-testid="bundle-delete" className="text-sm text-red-700 underline" onClick={() => removeBundle(b)}>
+                    Hapus
+                  </button>
+                )}
               </span>
             </li>
           ))}

@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 import type { StepContent, StepListItem } from '../../src/api';
 
+export const ADMIN = { id: 'u-admin', name: 'Admin Uji', email: 'admin@example.test', role: 'admin' };
+
 export type Handler = (init?: RequestInit, url?: URL) => Response | Promise<Response>;
 
 export function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
@@ -18,6 +20,8 @@ export function mockFetch(routes: Record<string, Handler>) {
   const all: Record<string, Handler> = {
     'GET /api/v1/steps': () => json(200, []),
     'GET /api/v1/bundles': () => json(200, []),
+    // U4: the app asks who is signed in first; Library tests run as an admin unless they override this.
+    'GET /api/v1/auth/me': () => json(200, ADMIN),
     ...routes,
   };
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

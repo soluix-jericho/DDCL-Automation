@@ -106,6 +106,7 @@ export interface Ddcl {
   id: string;
   title: string;
   status: string;
+  /** Name of the creator (derived on the server from the signed-in account). */
   createdBy: string;
   tabLabel: string;
 }
@@ -120,6 +121,70 @@ export interface ChecklistItem {
 export const GENERIC_ERROR = 'Terjadi kesalahan pada server. Silakan coba lagi.';
 
 export const BUSY_MESSAGE = 'Server sedang sibuk. Coba lagi sebentar lagi.';
+export const UNAUTHORIZED_MESSAGE = 'Sesi berakhir atau tidak sah. Silakan masuk lagi.';
+export const FORBIDDEN_MESSAGE = 'Hak akses tidak cukup untuk aksi ini.';
+export const TOO_MANY_MESSAGE = 'Terlalu banyak percobaan, coba lagi nanti.';
+
+/** U4: who may do what. Buttons follow this for convenience; the backend enforces it. */
+export type Role = 'admin' | 'editor' | 'viewer';
+const ROLE_RANK: Record<Role, number> = { viewer: 1, editor: 2, admin: 3 };
+export const hasRole = (role: Role, min: Role): boolean => ROLE_RANK[role] >= ROLE_RANK[min];
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+}
+
+export interface AccountUser extends AuthUser {
+  status: 'active' | 'inactive';
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+export const AUDIT_TYPES = [
+  'login_success',
+  'login_failed',
+  'login_locked',
+  'logout',
+  'account_created',
+  'role_changed',
+  'account_deactivated',
+  'account_reactivated',
+  'password_changed',
+  'password_reset_by_admin',
+  'lockout_cleared_by_admin',
+] as const;
+export type AuditType = (typeof AUDIT_TYPES)[number];
+
+export interface AuditEvent {
+  id: string;
+  occurredAt: string;
+  type: AuditType;
+  actorUserId: string | null;
+  targetUserId: string | null;
+  email: string | null;
+  ipAddress: string | null;
+  detail: string | null;
+}
+
+export interface AuditParams {
+  type?: string;
+  from?: string;
+  to?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+let unauthorizedHandler: (() => void) | null = null;
+let forbiddenHandler: (() => void) | null = null;
+
+/** AuthContext registers these: 401 anywhere sends the screen to Login, 403 refreshes the role (read mode). */
+export function setAuthHandlers(handlers: { onUnauthorized: (() => void) | null; onForbidden: (() => void) | null }): void {
+  unauthorizedHandler = handlers.onUnauthorized;
+  forbiddenHandler = handlers.onForbidden;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -152,6 +217,9 @@ async function readError(res: Response): Promise<ApiError> {
   } catch {
     /* non-JSON error body: fall through to defaults */
   }
+  if (res.status === 401) return new ApiError(UNAUTHORIZED_MESSAGE, 401);
+  if (res.status === 403) return new ApiError(FORBIDDEN_MESSAGE, 403);
+  if (res.status === 429) return new ApiError(TOO_MANY_MESSAGE, 429);
   if (res.status === 503 && body.error === 'service_busy') {
     // Overload protection: say so, and never retry on our own (a retried write could duplicate data).
     return new ApiError(BUSY_MESSAGE, 503);
@@ -177,7 +245,13 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   } catch {
     throw new ApiError(GENERIC_ERROR, 0);
   }
-  if (!res.ok) throw await readError(res);
+  if (!res.ok) {
+    const err = await readError(res);
+    // A failed login is a 401 about the credentials, not about an expired session.
+    if (err.status === 401 && path !== '/api/v1/auth/login') unauthorizedHandler?.();
+    if (err.status === 403) forbiddenHandler?.();
+    throw err;
+  }
   return res;
 }
 
@@ -261,4 +335,59 @@ export async function exportDdcl(ddclId: string): Promise<{ blob: Blob; fileName
   const disposition = res.headers.get('Content-Disposition') ?? '';
   const match = /filename="([^"]+)"/.exec(disposition);
   return { blob: await res.blob(), fileName: match?.[1] ?? `DDCL-${ddclId}.xlsx` };
+}
+
+// --- U4: sessions and accounts. The session token lives only in the httpOnly cookie; nothing is stored here.
+
+export async function login(email: string, password: string): Promise<AuthUser> {
+  return ((await (await request('/api/v1/auth/login', json({ email, password }))).json()) as { user: AuthUser }).user;
+}
+
+export async function logout(): Promise<void> {
+  await request('/api/v1/auth/logout', { method: 'POST' });
+}
+
+export async function getMe(): Promise<AuthUser> {
+  return (await request('/api/v1/auth/me')).json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await request('/api/v1/auth/password', json({ currentPassword, newPassword }));
+}
+
+export async function listUsers(): Promise<AccountUser[]> {
+  return (await request('/api/v1/users')).json();
+}
+
+export async function createUser(input: {
+  name: string;
+  email: string;
+  role: Role;
+  password: string;
+}): Promise<AccountUser> {
+  return (await request('/api/v1/users', json(input))).json();
+}
+
+export async function patchUser(
+  id: string,
+  input: { role?: Role; status?: 'inactive' },
+): Promise<AccountUser> {
+  return (await request(`/api/v1/users/${encodeURIComponent(id)}`, json(input, 'PATCH'))).json();
+}
+
+export async function resetUserPassword(id: string, newPassword: string): Promise<void> {
+  await request(`/api/v1/users/${encodeURIComponent(id)}/password`, json({ newPassword }));
+}
+
+export async function unlockUser(id: string): Promise<void> {
+  await request(`/api/v1/users/${encodeURIComponent(id)}/unlock`, { method: 'POST' });
+}
+
+export async function listAuditEvents(
+  params: AuditParams = {},
+): Promise<{ items: AuditEvent[]; nextCursor: string | null }> {
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') usp.set(k, String(v));
+  const q = usp.toString();
+  return (await request(`/api/v1/audit-events${q ? `?${q}` : ''}`)).json();
 }

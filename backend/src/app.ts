@@ -9,7 +9,11 @@ import Fastify, {
 import type { AppConfig } from './config';
 import { Prisma } from '@prisma/client';
 import {
+  AccountConflictError,
   ConflictError,
+  ForbiddenError,
+  TooManyAttemptsError,
+  UnauthorizedError,
   DatabaseUnavailable,
   NotFoundError,
   RetryExhausted,
@@ -19,12 +23,15 @@ import {
 } from './errors';
 import { exportDdclToXlsx } from './excel';
 import type { Repository } from './repository';
+import { registerAuditRoutes } from './auditRoutes';
+import { registerAuthRoutes } from './authRoutes';
 import { registerLibraryRoutes } from './libraryRoutes';
+import { registerSessionGate } from './sessionGate';
+import { registerUserRoutes } from './userRoutes';
 import { tabLabel, validateChecklistInput, validateDdclInput } from './rules';
 import { createWriteLimiter, WriteLimiter } from './writeLimiter';
 
-export const SESSION_COOKIE = 'ddcl_session';
-export const STUB_SESSION_VALUE = 'dev-session';
+export { SESSION_COOKIE } from './sessionToken';
 export const GENERIC_ERROR_MESSAGE = 'Terjadi kesalahan pada server. Silakan coba lagi.';
 const BUSY_MESSAGE = 'Server sedang sibuk. Coba lagi sebentar lagi.';
 export const XLSX_MIME ='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -36,9 +43,24 @@ export interface BuildAppOptions {
   logger?: Record<string, unknown> | boolean;
   /** Library write limiter; tests pass their own to observe slots. Default: 4 concurrent writes. */
   writeLimiter?: WriteLimiter;
+  /** Test seam: sees every registered route, so a test can check that none escapes the gate (NFR5.20). */
+  onRoute?: (route: { method: string | string[]; url: string }) => void;
 }
 
-const defaultLogger = {
+/** NFR3.25: second line of defence; the code never logs these fields in the first place. */
+const SENSITIVE = ['password', 'currentPassword', 'newPassword', 'passwordHash', 'tokenHash', 'token', 'sessionToken', 'authorization', 'cookie'];
+
+export const defaultLogger = {
+  redact: {
+    paths: [
+      ...SENSITIVE,
+      ...SENSITIVE.map((k) => `*.${k}`),
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'res.headers["set-cookie"]',
+    ],
+    censor: '[Redacted]',
+  },
   level: process.env.LOG_LEVEL ?? 'info',
   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
   formatters: { level: (label: string) => ({ level: label }) },
@@ -57,36 +79,43 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
   const { repo, config } = opts;
   const app = Fastify({
     logger: (opts.logger ?? defaultLogger) as FastifyServerOptions['logger'],
+    // NFR2.32: X-Forwarded-For is trusted only when configured.
+    trustProxy: config.trustProxy ?? false,
   });
 
   repo.setWarnSink((obj, msg) => app.log.warn(obj, msg));
+  if (opts.onRoute) {
+    const seen = opts.onRoute;
+    app.addHook('onRoute', (route) => seen({ method: route.method, url: route.url }));
+  }
 
   await app.register(cors, {
-    origin: config.frontendOrigin,
+    origin: config.allowedOrigins,
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type'],
     exposedHeaders: ['Content-Disposition'],
   });
   await app.register(cookie);
-
-  // NFR2.1/NFR2.2: stub session cookie; this hook never rejects a request.
-  app.addHook('onRequest', async (request, reply) => {
-    try {
-      if (!request.cookies?.[SESSION_COOKIE]) {
-        reply.setCookie(SESSION_COOKIE, STUB_SESSION_VALUE, {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-        });
-      }
-    } catch (err) {
-      request.log.warn({ err }, 'session cookie stub failed; continuing');
-    }
-  });
 
   // Central error handler (BR1.1, BR1.4, BR1.5, NFR3.2).
   app.setErrorHandler((err: unknown, request: FastifyRequest, reply: FastifyReply) => {
     if (err instanceof ValidationError) {
       return reply.code(400).send({ error: 'validation_error', message: err.message, fields: err.fields });
+    }
+    if (err instanceof UnauthorizedError) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+    if (err instanceof ForbiddenError) {
+      return reply.code(403).send({ error: 'forbidden', message: err.message });
+    }
+    if (err instanceof TooManyAttemptsError) {
+      return reply
+        .code(429)
+        .header('Retry-After', String(err.retryAfterSeconds))
+        .send({ error: 'too_many_attempts', message: 'Terlalu banyak percobaan. Coba lagi nanti.' });
+    }
+    if (err instanceof AccountConflictError) {
+      return reply.code(409).send({ error: 'conflict', message: err.message });
     }
     if (err instanceof NotFoundError) {
       return reply.code(404).send({ error: 'not_found', message: err.message });
@@ -105,7 +134,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
       });
     }
     if (err instanceof ServiceBusyError) {
-      request.log.warn({ reason: err.reason, path: request.url }, 'Library request rejected: service busy');
+      request.log.warn({ reason: err.reason, path: request.url }, 'Request rejected: service busy');
       return reply
         .code(503)
         .header('Retry-After', String(err.retryAfterSeconds))
@@ -158,11 +187,16 @@ export async function buildApp(opts: BuildAppOptions): Promise<FastifyInstance> 
 
   await app.register(
     async (api) => {
+      // The gate goes first: hooks apply to the routes registered after them (BR4.8).
+      registerSessionGate(api, { repo, config });
+      registerAuthRoutes(api, { repo, config });
+      registerUserRoutes(api, { repo });
+      registerAuditRoutes(api, { repo });
       registerLibraryRoutes(api, { repo, limiter: opts.writeLimiter ?? createWriteLimiter() });
 
       api.post('/ddcls', async (request, reply) => {
         const input = validateDdclInput(request.body);
-        const ddcl = await repo.createDdcl(input);
+        const ddcl = await repo.createDdcl(input, request.auth!.user.id);
         return reply.code(201).send({ ...ddcl, tabLabel: tabLabel(ddcl.releaseHeader?.date, ddcl.title) });
       });
 

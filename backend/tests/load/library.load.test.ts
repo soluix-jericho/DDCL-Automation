@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRepository } from '../../src/repository';
 import { createTestPrisma, truncateAll } from '../helpers/db';
 import { makeApp } from '../u2/helpers';
+import { makeUser } from '../u4/helpers';
 
 /**
  * Load test for the Library (NFR1.5-NFR1.7, NFR1.9, NFR1.6 payload size).
@@ -88,7 +89,8 @@ beforeAll(async () => {
     SELECT 'lb' || b, 'ls' || (2 * (((b - 1) * 3 + p - 1) % 500 + 1) - 1), p
     FROM generate_series(1, 100) b, generate_series(1, 3) p`);
 
-  await exec(`INSERT INTO "DdclDocument" ("id","title","createdBy") SELECT 'ld' || g, 'DDCL ' || g, 'load' FROM generate_series(0, 999) g`);
+  const creator = await makeUser(prisma);
+  await exec(`INSERT INTO "DdclDocument" ("id","title","createdByUserId") SELECT 'ld' || g, 'DDCL ' || g, '${creator.id}' FROM generate_series(0, 999) g`);
   await exec(`INSERT INTO "ChecklistItem" ("id","ddclId","stepId","order","stepSnapshot")
     SELECT 'lci' || g, 'ld' || (g % 1000), 'ls' || (1 + g % 1000), g,
            jsonb_build_object('id', 'ls' || (1 + g % 1000), 'name', 'Load step', 'category', 'Database', 'kind', 'forward',

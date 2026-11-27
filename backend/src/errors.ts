@@ -32,7 +32,7 @@ export class ConflictError extends Error {
 /** Overload protection: the write limiter is full or the connection pool is exhausted (503). */
 export class ServiceBusyError extends Error {
   constructor(
-    public readonly reason: 'write-limit' | 'pool',
+    public readonly reason: 'write-limit' | 'pool' | 'hash',
     public readonly retryAfterSeconds = 2,
   ) {
     super(`Service busy: ${reason}`);
@@ -67,5 +67,37 @@ export class TemplateUnavailable extends Error {
   ) {
     super(`Excel template cannot be loaded from: ${expectedPath}`);
     this.name = 'TemplateUnavailable';
+  }
+}
+
+/** No valid session, or wrong credentials. Always answered with the same generic 401 (BR4.3, BR4.8). */
+export class UnauthorizedError extends Error {
+  constructor(message = 'unauthorized') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+/** Valid session but the role is too low, or the Origin is not allowed (403; BR4.9, BR4.15). */
+export class ForbiddenError extends Error {
+  constructor(message = 'Hak akses tidak cukup untuk aksi ini.') {
+    super(message);
+    this.name = 'ForbiddenError';
+  }
+}
+
+/** The email is locked after repeated failures (429 with Retry-After; BR4.4). */
+export class TooManyAttemptsError extends Error {
+  constructor(public readonly retryAfterSeconds: number) {
+    super('Too many attempts');
+    this.name = 'TooManyAttemptsError';
+  }
+}
+
+/** An account rule refuses the change: duplicate email, last admin, self-action, ... (409; BR4.13, BR4.14, BR4.19). */
+export class AccountConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AccountConflictError';
   }
 }

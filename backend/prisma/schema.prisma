@@ -105,11 +105,90 @@ model BundleRollbackMember {
   @@index([stepId])
 }
 
+enum UserRole {
+  admin
+  editor
+  viewer
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+enum AuditEventType {
+  login_success
+  login_failed
+  login_locked
+  logout
+  account_created
+  role_changed
+  account_deactivated
+  account_reactivated
+  password_changed
+  password_reset_by_admin
+  lockout_cleared_by_admin
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  // Stored trimmed and lowercase by the code (BR4.1).
+  email        String       @unique
+  passwordHash String
+  role         UserRole
+  status       UserStatus   @default(active)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  lastLoginAt  DateTime?
+  sessions     Session[]
+  ddcls        DdclDocument[] @relation("DdclCreator")
+  auditActor   AuditEvent[] @relation("AuditActor")
+  auditTarget  AuditEvent[] @relation("AuditTarget")
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+model LoginThrottle {
+  email       String    @id
+  failedCount Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @default(now()) @updatedAt
+}
+
+model AuditEvent {
+  id           String         @id @default(cuid())
+  occurredAt   DateTime       @default(now())
+  type         AuditEventType
+  actorUserId  String?
+  actor        User?          @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  targetUserId String?
+  target       User?          @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  email        String?
+  ipAddress    String?
+  detail       String?        @db.VarChar(500)
+
+  @@index([occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([type, occurredAt(sort: Desc), id(sort: Desc)])
+}
+
 model DdclDocument {
   id             String          @id @default(cuid())
   title          String
   status         DdclStatus      @default(Draft)
-  createdBy      String
+  // Nullable in the database, enforced by the application and checked at every start (BR4.16).
+  createdByUserId String?
+  createdBy       User?          @relation("DdclCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   createdAt      DateTime        @default(now())
   releaseHeader  ReleaseHeader?
   checklistItems ChecklistItem[]

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
+import type { AuthApp } from '../u4/helpers';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -10,7 +11,7 @@ import { createTestPrisma, truncateAll } from '../helpers/db';
 import { makeApp, stepJson } from './helpers';
 
 let prisma: PrismaClient;
-let app: FastifyInstance | undefined;
+let app: AuthApp | undefined;
 
 beforeAll(() => {
   prisma = createTestPrisma();
@@ -139,7 +140,7 @@ describe('write limiter in the API (503 and slot release)', () => {
       port,
       path: '/api/v1/steps',
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'content-length': '1000000' },
+      headers: { 'content-type': 'application/json', 'content-length': '1000000', authorization: app.as('editor').authorization },
     });
     clientRequest.on('error', () => undefined);
     clientRequest.write('{"name":"partial');
@@ -163,7 +164,7 @@ describe('write limiter in the API (503 and slot release)', () => {
       port,
       path: '/api/v1/steps',
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'content-length': '5000000' },
+      headers: { 'content-type': 'application/json', 'content-length': '5000000', authorization: app.as('editor').authorization },
     });
     const status = await new Promise<number>((resolve, reject) => {
       r.on('response', (res) => {

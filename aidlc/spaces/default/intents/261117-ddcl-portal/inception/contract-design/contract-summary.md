@@ -51,8 +51,21 @@ paths:
                       id: { type: string }
                       name: { type: string }
                       email: { type: string }
+                      role: { type: string, enum: [admin, editor, viewer] }
+          headers:
+            Set-Cookie:
+              description: "ddcl_session=<token>; HttpOnly; SameSite=Lax; Path=/ (Secure bila COOKIE_SECURE aktif; tanpa Max-Age). Token yang sama ada di sessionToken dan boleh dikirim sebagai Authorization: Bearer"
+              schema: { type: string }
+        "400":
+          description: Email atau kata sandi kosong atau bentuknya tidak valid (fields menyebut yang bermasalah)
         "401":
-          description: Kredensial salah
+          description: "Kredensial salah, email tidak terdaftar, atau akun nonaktif (jawaban generik yang sama)"
+        "403":
+          description: Origin permintaan tidak ada di ALLOWED_ORIGINS
+        "429":
+          description: Email terkunci 15 menit setelah 5 kegagalan beruntun (header Retry-After, kata sandi tidak diperiksa)
+        "503":
+          description: Antrean hash penuh (header Retry-After)
   /api/v1/auth/logout:
     post:
       summary: Akhiri sesi aktif
@@ -75,9 +88,153 @@ paths:
                   id: { type: string }
                   name: { type: string }
                   email: { type: string }
+                  role: { type: string, enum: [admin, editor, viewer] }
         "401":
           description: Belum login
+  /api/v1/auth/password:
+    post:
+      summary: Ganti kata sandi sendiri (semua role); sesi lain pengguna itu dicabut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "204": { description: Kata sandi diganti }
+        "400": { description: Kata sandi lama tidak cocok (dihitung ke penguncian), kata sandi baru tidak sah atau sama dengan yang lama }
+        "401": { description: Belum login }
+        "429": { description: Email terkunci (Retry-After) }
+  /api/v1/users:
+    get:
+      summary: Daftar akun (admin)
+      responses:
+        "200":
+          description: Larik akun
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+    post:
+      summary: Buat akun (admin)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, role, password]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                email: { type: string, maxLength: 254 }
+                role: { type: string, enum: [admin, editor, viewer] }
+                password: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "201": { description: Akun dibuat (tanpa hash), content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } }
+        "400": { description: Isian tidak sah (fields) }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+        "409": { description: Email sudah terdaftar, termasuk akun nonaktif }
+  /api/v1/users/{id}:
+    patch:
+      summary: Ubah role dan atau status (admin); hanya field role dan status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [admin, editor, viewer] }
+                status: { type: string, enum: [inactive] }
+      responses:
+        "200": { description: Akun setelah perubahan; juga untuk perubahan yang tidak mengubah apa pun (idempoten) }
+        "400": { description: Isi kosong, field selain role dan status, atau nilai tidak sah }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+        "404": { description: Akun tidak ada }
+        "409": { description: Menonaktifkan diri sendiri, admin aktif terakhir diturunkan atau dinonaktifkan, atau status active pada akun nonaktif }
+  /api/v1/users/{id}/password:
+    post:
+      summary: Atur ulang kata sandi akun lain (admin); semua sesinya dicabut dan kunci loginnya dibuka
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              properties:
+                newPassword: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "204": { description: Kata sandi diatur ulang }
+        "400": { description: Kata sandi tidak sah }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+        "404": { description: Akun tidak ada }
+        "409": { description: Akun sendiri (pakai POST /auth/password) }
+  /api/v1/users/{id}/unlock:
+    post:
+      summary: Buka kunci login satu email (admin); idempoten
+      responses:
+        "204": { description: Kunci dibuka }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+        "404": { description: Akun tidak ada }
+  /api/v1/audit-events:
+    get:
+      summary: Catatan audit akun, hanya baca (admin), terbaru lebih dulu
+      parameters:
+        - { name: type, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, description: "Tanggal tanpa jam mencakup seluruh hari itu", schema: { type: string, format: date } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: cursor, in: query, description: "nextCursor dari halaman sebelumnya", schema: { type: string } }
+      responses:
+        "200":
+          description: Satu halaman peristiwa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        occurredAt: { type: string, format: date-time }
+                        type: { type: string }
+                        actorUserId: { type: string, nullable: true }
+                        targetUserId: { type: string, nullable: true }
+                        email: { type: string, nullable: true }
+                        ipAddress: { type: string, nullable: true }
+                        detail: { type: string, nullable: true }
+                  nextCursor: { type: string, nullable: true }
+        "400": { description: Filter tidak sah (fields menyebut yang bermasalah) }
+        "401": { description: Belum login }
+        "403": { description: Bukan admin }
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, editor, viewer] }
+        status: { type: string, enum: [active, inactive] }
+        createdAt: { type: string, format: date-time }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
 ```
+
+**Pembawa sesi dan pemeriksaan (berlaku untuk semua `/api/v1/*`, Contract 1 sampai 5):** sesi dibawa cookie `ddcl_session` (httpOnly, dipakai frontend) atau header `Authorization: Bearer <sessionToken>` (bila keduanya ada, Bearer dipakai). Permintaan tulis yang diautentikasi lewat cookie, atau tanpa sesi (login), dan membawa header `Origin` di luar `ALLOWED_ORIGINS` dijawab `403`; permintaan Bearer melewati pemeriksaan Origin. Sesi berlaku 8 jam sejak aktivitas terakhir dengan batas mutlak 7 hari.
+
+**Respons tambahan pada Contract 2–5 (tanpa mengubah bentuk yang sudah ada):** `401` `{ "error": "unauthorized" }` tanpa sesi valid, `403` `{ "error": "forbidden" }` bila role di bawah role minimal rute, `429` tidak berlaku di luar login dan ganti kata sandi, dan `503` `service_busy` tetap seperti semula. Role minimal: semua `GET` dan ekspor = viewer; `POST`/`PATCH` Library dan DDCL = editor; `DELETE` step dan bundle (dan DDCL pada U3) = admin. `createdBy` pada respons DDCL kini nama pembuat dan `createdByUserId` ikut dikembalikan.
 
 ## Contract 2 — Step Library API (u2-step-library)
 

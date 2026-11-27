@@ -8,6 +8,8 @@ interface Props {
   itemAdded: boolean;
   onDdclCreated: (ddcl: Ddcl) => void;
   onItemAdded: () => void;
+  /** Convenience only: the backend refuses writes from a viewer (BR4.9). Default true. */
+  canWrite?: boolean;
 }
 
 const HEADER_FIELDS: Array<{ key: keyof ReleaseHeaderInput; label: string; type?: string }> = [
@@ -20,7 +22,14 @@ const HEADER_FIELDS: Array<{ key: keyof ReleaseHeaderInput; label: string; type?
   { key: 'technicalChange', label: 'Technical changes' },
 ];
 
-export function ComposeScreen({ steps, ddcl, itemAdded, onDdclCreated, onItemAdded }: Props) {
+export function ComposeScreen({
+  steps,
+  ddcl,
+  itemAdded,
+  onDdclCreated,
+  onItemAdded,
+  canWrite = true,
+}: Props) {
   const [title, setTitle] = useState('');
   const [header, setHeader] = useState<ReleaseHeaderInput>({});
   const [stepId, setStepId] = useState('');
@@ -73,7 +82,13 @@ export function ComposeScreen({ steps, ddcl, itemAdded, onDdclCreated, onItemAdd
         Susun DDCL — <span data-testid="tab-label">{label}</span>
       </h2>
 
-      {!ddcl && (
+      {!canWrite && (
+        <p role="status" data-testid="compose-readonly">
+          Role Anda hanya bisa membaca: DDCL tidak bisa dibuat atau diubah.
+        </p>
+      )}
+
+      {canWrite && !ddcl && (
         <form onSubmit={submitDdcl} noValidate>
           <div>
             <label htmlFor="ddcl-title">Judul DDCL</label>
@@ -108,7 +123,7 @@ export function ComposeScreen({ steps, ddcl, itemAdded, onDdclCreated, onItemAdd
         </p>
       )}
 
-      {ddcl && !itemAdded && (
+      {canWrite && ddcl && !itemAdded && (
         <form onSubmit={submitItem} noValidate>
           <div>
             <label htmlFor="checklist-step">Step</label>

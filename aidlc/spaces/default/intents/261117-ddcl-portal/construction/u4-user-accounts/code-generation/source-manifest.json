@@ -1,0 +1,262 @@
+{
+  "stage": "code-generation",
+  "unit": "u4-user-accounts",
+  "version": 1,
+  "writes": [
+    {
+      "path": ".env.example"
+    },
+    {
+      "path": "README.md"
+    },
+    {
+      "path": "backend/prisma/migrations/20261127000000_u4_user_accounts/migration.sql"
+    },
+    {
+      "path": "backend/prisma/schema.prisma"
+    },
+    {
+      "path": "backend/src/accountRepository.ts"
+    },
+    {
+      "path": "backend/src/accountRules.ts"
+    },
+    {
+      "path": "backend/src/app.ts"
+    },
+    {
+      "path": "backend/src/auditRepository.ts"
+    },
+    {
+      "path": "backend/src/auditRoutes.ts"
+    },
+    {
+      "path": "backend/src/authRoutes.ts"
+    },
+    {
+      "path": "backend/src/bootstrap.ts"
+    },
+    {
+      "path": "backend/src/config.ts"
+    },
+    {
+      "path": "backend/src/errors.ts"
+    },
+    {
+      "path": "backend/src/hashGate.ts"
+    },
+    {
+      "path": "backend/src/libraryTx.ts"
+    },
+    {
+      "path": "backend/src/passwordService.ts"
+    },
+    {
+      "path": "backend/src/repository.ts"
+    },
+    {
+      "path": "backend/src/retention.ts"
+    },
+    {
+      "path": "backend/src/roles.ts"
+    },
+    {
+      "path": "backend/src/rules.ts"
+    },
+    {
+      "path": "backend/src/scripts/recovery.ts"
+    },
+    {
+      "path": "backend/src/server.ts"
+    },
+    {
+      "path": "backend/src/sessionGate.ts"
+    },
+    {
+      "path": "backend/src/sessionRepository.ts"
+    },
+    {
+      "path": "backend/src/sessionToken.ts"
+    },
+    {
+      "path": "backend/src/throttleService.ts"
+    },
+    {
+      "path": "backend/src/userRoutes.ts"
+    },
+    {
+      "path": "backend/tests/helpers/db.ts"
+    },
+    {
+      "path": "backend/tests/load/auth.load.test.ts"
+    },
+    {
+      "path": "backend/tests/load/library.load.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/api.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/data-model.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/excel.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/repository.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/rules.test.ts"
+    },
+    {
+      "path": "backend/tests/u1/sanity.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/bundlesApi.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/data-model.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/helpers.ts"
+    },
+    {
+      "path": "backend/tests/u2/migration.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/snapshot.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/stepRepository.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/stepsApi.test.ts"
+    },
+    {
+      "path": "backend/tests/u2/writeLimiter.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/accountRepository.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/accountRules.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/auditApi.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/auditRepository.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/authApi.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/bootstrap.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/concurrency.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/data-model.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/hashGate.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/helpers.ts"
+    },
+    {
+      "path": "backend/tests/u4/logging.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/migration.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/passwordService.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/recovery.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/retention.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/roles.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/routeRoles.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/sessionGate.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/sessionRepository.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/sessionToken.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/throttleService.test.ts"
+    },
+    {
+      "path": "backend/tests/u4/usersApi.test.ts"
+    },
+    {
+      "path": "docker-compose.yml"
+    },
+    {
+      "path": "frontend/src/App.tsx"
+    },
+    {
+      "path": "frontend/src/api.ts"
+    },
+    {
+      "path": "frontend/src/auth/AuthContext.tsx"
+    },
+    {
+      "path": "frontend/src/screens/AccountsScreen.tsx"
+    },
+    {
+      "path": "frontend/src/screens/AuditScreen.tsx"
+    },
+    {
+      "path": "frontend/src/screens/ChangePasswordDialog.tsx"
+    },
+    {
+      "path": "frontend/src/screens/ComposeScreen.tsx"
+    },
+    {
+      "path": "frontend/src/screens/LibraryScreen.tsx"
+    },
+    {
+      "path": "frontend/src/screens/LoginScreen.tsx"
+    },
+    {
+      "path": "frontend/tests/u1/app.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u2/mock.ts"
+    },
+    {
+      "path": "frontend/tests/u4/accounts.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u4/api.test.ts"
+    },
+    {
+      "path": "frontend/tests/u4/audit.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u4/auth.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u4/changePassword.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u4/login.test.tsx"
+    },
+    {
+      "path": "frontend/tests/u4/mock.ts"
+    }
+  ]
+}
